@@ -1,0 +1,45 @@
+# Two themes; viewers switch with the menu (top right) -> Settings, or follow their system setting.
+# Colour carries meaning in the app: pink = from a datasheet, amber = computed, lime = the app itself.
+
+[theme]
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+headingFont = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+headingFontWeights = [700, 600]
+baseRadius = "8px"
+showSidebarBorder = true
+
+[theme.dark]
+primaryColor = "#C6F135"
+backgroundColor = "#141414"
+secondaryBackgroundColor = "#232323"
+textColor = "#F2F2F2"
+linkColor = "#FF5FA2"
+borderColor = "#2E2E2E"
+codeBackgroundColor = "#232323"
+
+[theme.dark.sidebar]
+backgroundColor = "#181818"
+secondaryBackgroundColor = "#232323"
+textColor = "#F2F2F2"
+primaryColor = "#C6F135"
+borderColor = "#2E2E2E"
+
+[theme.light]
+primaryColor = "#86C61A"
+backgroundColor = "#F7F6F3"
+secondaryBackgroundColor = "#EDEBE6"
+textColor = "#161616"
+linkColor = "#C2185B"
+borderColor = "#E6E3DD"
+codeBackgroundColor = "#EDEBE6"
+
+[theme.light.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F0EC"
+textColor = "#161616"
+primaryColor = "#86C61A"
+borderColor = "#E6E3DD"
+
+[client]
+toolbarMode = "viewer"
