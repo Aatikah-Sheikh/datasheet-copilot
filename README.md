@@ -73,7 +73,7 @@ Streamlit UI (app.py)
 Requires Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/<your-username>/datasheet-copilot.git
+git clone https://github.com/Aatikah-Sheikh/datasheet-copilot.git
 cd datasheet-copilot
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
