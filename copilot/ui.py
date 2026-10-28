@@ -41,7 +41,7 @@ CSS = """
   --hero-line: #2E2E2E;
 }
 /* Primary buttons are lime in both themes, so they take charcoal text, not Streamlit's default white */
-[data-testid="stBaseButton-primary"], [data-testid="stBaseButton-primary"] p { color: #141414 !important; font-weight: 600; }
+[data-testid="stBaseButton-primary"]:not(:disabled), [data-testid="stBaseButton-primary"]:not(:disabled) p { color: #141414 !important; font-weight: 600; }
 .block-container { padding-top: 3.6rem; padding-bottom: 2rem; max-width: 1360px; }  /* clears Streamlit's top bar */
 
 /* Hero band: charcoal in both themes, lit by the three provenance colours */

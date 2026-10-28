@@ -8,17 +8,21 @@ import streamlit as st
 st.set_page_config(page_title="Datasheet Copilot", page_icon=":material/memory:", layout="wide")
 
 
-def _load_streamlit_secrets() -> None:
-    """On Streamlit Community Cloud, keys live in st.secrets; expose them as env vars."""
+def _load_streamlit_secrets() -> list[str]:
+    """On Streamlit Community Cloud, keys live in st.secrets; expose top-level values as env vars.
+    Returns the secret names found (names only, never values) for the setup message."""
     try:
+        names = []
         for key, value in st.secrets.items():
-            if isinstance(value, str):
-                os.environ.setdefault(key, value)
+            if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+                os.environ.setdefault(key.strip(), str(value).strip())
+                names.append(key)
+        return names
     except Exception:  # no secrets.toml when running locally with .env
-        pass
+        return []
 
 
-_load_streamlit_secrets()
+SECRET_NAMES = _load_streamlit_secrets()
 
 from openai import APIError  # noqa: E402
 
@@ -167,7 +171,11 @@ def main() -> None:
     ui.inject_css()
     ui.render_hero()
     if client is None:
-        st.error("NEBIUS_API_KEY is not set. Add it to `.env` (local) or the app's secrets (hosted).")
+        found = ", ".join(f"`{n}`" for n in SECRET_NAMES) or "none"
+        st.error(
+            "NEBIUS_API_KEY is not set. Add it to `.env` (local) or the app's secrets (hosted: "
+            f"Manage app → Settings → Secrets, then Reboot). Secrets found: {found}."
+        )
 
     _sidebar(s, client)
 
