@@ -12,6 +12,7 @@ DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/"
 # to list the Nemotron IDs your key can see and confirm these exist.
 DEFAULT_REASONING_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 DEFAULT_FAST_MODEL = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+DEFAULT_VISION_MODEL = "nvidia/Nemotron-3.5-Super-VL"
 
 
 # Hard token caps (prompt + completion). Keep these well inside your free credits.
@@ -39,6 +40,7 @@ class Settings:
     base_url: str
     reasoning_model: str
     fast_model: str
+    vision_model: str
     tavily_api_key: str | None
     max_tokens_per_session: int
     max_tokens_per_day: int
@@ -51,6 +53,7 @@ class Settings:
             base_url=_env("NEBIUS_BASE_URL", DEFAULT_BASE_URL),
             reasoning_model=_env("NEBIUS_REASONING_MODEL", DEFAULT_REASONING_MODEL),
             fast_model=_env("NEBIUS_FAST_MODEL", DEFAULT_FAST_MODEL),
+            vision_model=_env("NEBIUS_VISION_MODEL", DEFAULT_VISION_MODEL),
             tavily_api_key=_env("TAVILY_API_KEY"),
             max_tokens_per_session=_env_int("MAX_TOKENS_PER_SESSION", DEFAULT_MAX_TOKENS_PER_SESSION),
             max_tokens_per_day=_env_int("MAX_TOKENS_PER_DAY", DEFAULT_MAX_TOKENS_PER_DAY),

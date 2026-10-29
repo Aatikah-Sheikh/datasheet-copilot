@@ -1,6 +1,8 @@
-"""Tools the agent can call. Each returns a JSON-serialisable dict; failures return {"error": ...}."""
+"""Tools the agent can call. Each returns a dict; failures return {"error": ...}.
+Keys starting with "_" (such as a rendered page image) are for the UI and are not sent to the model."""
 
 import json
+from collections.abc import Callable
 
 from .calculator import CalcError, calculate
 from .fetch import FetchError, download_pdf
@@ -62,6 +64,32 @@ _CALCULATE = {
     },
 }
 
+_READ_GRAPH = {
+    "type": "function",
+    "function": {
+        "name": "read_graph",
+        "description": (
+            "Read a value off a graph on one datasheet page, using a vision model on an image of the page. "
+            "Use it for values shown only in figures, such as typical-characteristics curves. Figure captions "
+            "are in the page text, so find the page with search_datasheets first (e.g. 'Figure output swing "
+            "vs output current'). Readings are approximate."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "doc": {"type": "string", "description": "Document name."},
+                "page": {"type": "integer", "description": "Page number holding the graph."},
+                "question": {
+                    "type": "string",
+                    "description": "What to read, naming the figure, the x value and the condition, e.g. "
+                    "'Figure 5-48: source current limit at 25 °C'.",
+                },
+            },
+            "required": ["doc", "page", "question"],
+        },
+    },
+}
+
 _LIST = {
     "type": "function",
     "function": {
@@ -102,14 +130,23 @@ _FETCH = {
 }
 
 
+# (pdf bytes, doc, page, question) -> reading dict; copilot.figures.read_graph with a client bound
+GraphReader = Callable[[bytes, str, int, str], dict]
+
+
 class ToolBox:
-    def __init__(self, library: Library, tavily_api_key: str | None = None) -> None:
+    def __init__(
+        self, library: Library, tavily_api_key: str | None = None, graph_reader: GraphReader | None = None
+    ) -> None:
         self.library = library
         self.tavily_api_key = tavily_api_key
+        self.graph_reader = graph_reader
         self.added_docs: list[str] = []
 
     def schemas(self) -> list[dict]:
         tools = [_SEARCH, _CALCULATE, _LIST, _FETCH]
+        if self.graph_reader:
+            tools.append(_READ_GRAPH)
         if self.tavily_api_key:
             tools.append(_WEB_SEARCH)
         return tools
@@ -121,7 +158,8 @@ class ToolBox:
             except json.JSONDecodeError:
                 return {"error": "Arguments were not valid JSON"}
         handler = getattr(self, f"_tool_{name}", None)
-        if handler is None or (name == "web_search" and not self.tavily_api_key):
+        disabled = (name == "web_search" and not self.tavily_api_key) or (name == "read_graph" and not self.graph_reader)
+        if handler is None or disabled:
             return {"error": f"Unknown tool '{name}'"}
         try:
             return handler(**arguments)
@@ -142,6 +180,14 @@ class ToolBox:
 
     def _tool_calculate(self, expression: str, variables: dict | None = None, result_unit: str | None = None) -> dict:
         return calculate(expression, variables, result_unit)
+
+    def _tool_read_graph(self, doc: str, page: int, question: str) -> dict:
+        if doc not in self.library.files:
+            return {"error": f"No page images for '{doc}'. Loaded: {self.library.docs()}"}
+        page = int(page)
+        if not 1 <= page <= self.library.page_counts[doc]:
+            return {"error": f"{doc} has pages 1 to {self.library.page_counts[doc]}."}
+        return self.graph_reader(self.library.files[doc], doc, page, question)
 
     def _tool_list_datasheets(self) -> dict:
         return {"datasheets": [{"doc": d, "pages": n} for d, n in self.library.page_counts.items()]}

@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+from functools import partial
 from pathlib import Path
 
 import streamlit as st
@@ -31,6 +32,7 @@ from copilot import ui  # noqa: E402
 from copilot.agent import Step, run_agent  # noqa: E402
 from copilot.config import Settings  # noqa: E402
 from copilot.fetch import FetchError, download_pdf  # noqa: E402
+from copilot.figures import read_graph  # noqa: E402
 from copilot.library import Library, extract_pages  # noqa: E402
 from copilot.llm import make_client  # noqa: E402
 from copilot.specs import extract_spec_card  # noqa: E402
@@ -100,7 +102,7 @@ def _state():
 
 
 def _add_document(s, client, name: str, data: bytes) -> None:
-    pages_with_text = s.library.add_pages(name, _pages(data))
+    pages_with_text = s.library.add_pages(name, _pages(data), data)
     if pages_with_text == 0:
         s.library.remove(name)
         st.sidebar.error(f"{name}: no extractable text. It is probably a scanned PDF.")
@@ -156,7 +158,7 @@ def _sidebar(s, client) -> None:
         st.divider()
         st.html('<div class="dc-side-title">Token budget</div>')
         st.html(ui.usage_html(s.usage["tokens"], _usage_store().snapshot(), LIMITS))
-        st.html(ui.models_html(settings.reasoning_model, settings.fast_model, bool(settings.tavily_api_key)))
+        st.html(ui.models_html(settings.reasoning_model, settings.fast_model, settings.vision_model, bool(settings.tavily_api_key)))
         if s.chat and st.button("Clear conversation", icon=":material/restart_alt:", use_container_width=True):
             s.chat = []
             st.rerun()
@@ -227,7 +229,7 @@ def main() -> None:
 
     s.chat.append({"role": "user", "content": question})
     history = [{"role": t["role"], "content": t["content"]} for t in s.chat[:-1]][-8:]
-    toolbox = ToolBox(s.library, settings.tavily_api_key)
+    toolbox = ToolBox(s.library, settings.tavily_api_key, partial(read_graph, client, settings.vision_model))
     turn_area = live.container()  # replaces the empty state, if it was showing
     with turn_area:
         ui.render_turn(s.chat[-1])

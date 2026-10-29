@@ -62,6 +62,7 @@ class Library:
     def __init__(self) -> None:
         self.chunks: list[Chunk] = []
         self.page_counts: dict[str, int] = {}
+        self.files: dict[str, bytes] = {}  # original PDFs, so pages can be rendered for graph reading
         self._index: BM25 | None = None
 
     def docs(self) -> list[str]:
@@ -69,11 +70,13 @@ class Library:
 
     def add_pdf(self, name: str, data: bytes) -> int:
         """Index a PDF. Returns the number of pages that had extractable text."""
-        return self.add_pages(name, extract_pages(data))
+        return self.add_pages(name, extract_pages(data), data)
 
-    def add_pages(self, name: str, pages: list[str]) -> int:
+    def add_pages(self, name: str, pages: list[str], data: bytes | None = None) -> int:
         self.remove(name)
         self.page_counts[name] = len(pages)
+        if data is not None:
+            self.files[name] = data
         with_text = 0
         for number, text in enumerate(pages, start=1):
             text = re.sub(r"[ \t]+", " ", text).strip()
@@ -92,6 +95,7 @@ class Library:
     def remove(self, name: str) -> None:
         if name in self.page_counts:
             del self.page_counts[name]
+            self.files.pop(name, None)
             self.chunks = [c for c in self.chunks if c.doc != name]
             self._index = None
 

@@ -139,6 +139,8 @@ def test_false_calculator_claim_is_sent_back():
         ("lm2596-d.pdf p.1 & p.4", ("lm2596-d.pdf", [1, 4])),
         ("LM2596.PDF p.2, p.10", ("LM2596.PDF", [2, 10])),
         ("lm358.pdf pp. 4-5", ("lm358.pdf", [4, 5])),
+        ("read_graph: lm358.pdf p.23", ("lm358.pdf", [23])),
+        ("Source: lm358.pdf p.4", ("lm358.pdf", [4])),
         ("calculate", None),
         ("see note", None),
     ],
@@ -161,7 +163,7 @@ def test_verification_badge_counts_backed_and_unbacked_citations():
         Step("calculate", {"expression": "1+1"}, {"expression": "1+1", "display": "2"}),
         Step("calculate", {"expression": "V+I"}, {"error": "units"}),
     ]
-    assert verification_summary("A [a.pdf p.1] B [a.pdf p.1 & p.4].", steps) == {"verified": 1, "unverified": 1, "calculations": 1}
+    assert verification_summary("A [a.pdf p.1] B [a.pdf p.1 & p.4].", steps) == {"verified": 1, "unverified": 1, "calculations": 1, "graphs": 0}
     assert "not found" in verification_html("A [a.pdf p.1 & p.4].", steps)
     assert "Grounding check passed" in verification_html("A [a.pdf p.1].", steps)
 
@@ -187,3 +189,72 @@ def test_toolbox_reports_bad_input_as_error():
     assert "error" in toolbox.call("calculate", {"expression": "V + I", "variables": {"V": "1 V", "I": "1 A"}})
     assert "error" in toolbox.call("web_search", {"query": "x"})  # no Tavily key configured
     assert "error" in toolbox.call("search_datasheets", "{not json")
+
+
+def _one_page_pdf() -> bytes:
+    import io
+
+    import pypdfium2 as pdfium
+
+    pdf, buffer = pdfium.PdfDocument.new(), io.BytesIO()
+    pdf.new_page(200, 200)
+    pdf.save(buffer)
+    return buffer.getvalue()
+
+
+def test_read_graph_sends_the_page_image_and_returns_a_cited_reading():
+    from copilot.figures import read_graph
+
+    client = StubClient([('{"figure": "Figure 5-48", "reading": "At 25 °C", "value": "≈ 36 mA", '
+                          '"conditions": "VCC = 15 V", "confidence": "high"}', None)])
+    result = read_graph(client, "vl-model", _one_page_pdf(), "lm358.pdf", 1, "Source current at 25 °C?")
+
+    assert (result["doc"], result["page"], result["value"]) == ("lm358.pdf", 1, "≈ 36 mA")
+    assert result["_image"][:2] == b"\xff\xd8"  # JPEG preview for the evidence panel
+    content = client.requests[0]["messages"][1]["content"]
+    assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+
+def test_read_graph_without_a_value_is_an_error():
+    from copilot.figures import read_graph
+
+    client = StubClient([('{"figure": null, "reading": "No graph on this page", "value": null}', None)])
+    assert "error" in read_graph(client, "vl-model", _one_page_pdf(), "a.pdf", 1, "Gain at 1 MHz?")
+
+
+def test_graph_reading_counts_as_evidence_and_its_image_is_not_sent_to_the_model():
+    from copilot.agent import retrieved_pages
+    from copilot.ui import verification_summary
+
+    library = _library()
+    library.files["PDA05CF2.pdf"] = b"%PDF"
+    reading = {"doc": "PDA05CF2.pdf", "page": 2, "figure": "Figure 3", "reading": "r", "value": "≈ 1 V", "_image": b"jpeg"}
+    toolbox = ToolBox(library, graph_reader=lambda data, doc, page, question: reading)
+    assert "read_graph" in [t["function"]["name"] for t in toolbox.schemas()]
+    assert "read_graph" not in [t["function"]["name"] for t in ToolBox(library).schemas()]
+    assert "error" in toolbox.call("read_graph", {"doc": "PDA05CF2.pdf", "page": 9, "question": "q"})
+    assert "error" in toolbox.call("read_graph", {"doc": "OPA847.pdf", "page": 1, "question": "q"})  # no PDF bytes
+
+    client = StubClient([
+        (None, [_tool_call("1", "read_graph", {"doc": "PDA05CF2.pdf", "page": 2, "question": "swing at 10 mA"})]),
+        ("Swing is ≈ 1 V [PDA05CF2.pdf p.2].", None),
+    ])
+    result = run_agent(client, "test-model", toolbox, "Swing?")
+
+    assert ("PDA05CF2.pdf", 2) in retrieved_pages(result.steps)
+    assert unsupported_citations(result.answer, result.steps) == []
+    sent = [m["content"] for m in client.requests[1]["messages"] if m["role"] == "tool"][0]
+    assert "_image" not in sent and "≈ 1 V" in sent
+    assert verification_summary(result.answer, result.steps) == {"verified": 1, "unverified": 0, "calculations": 0, "graphs": 1}
+
+
+def test_trim_margins_crops_blank_space_and_a_lone_footer():
+    from PIL import Image, ImageDraw
+
+    from copilot.figures import trim_margins
+
+    page = Image.new("RGB", (1000, 1300), "white")
+    draw = ImageDraw.Draw(page)
+    draw.rectangle((100, 100, 900, 600), outline="black", width=3)  # the figures
+    draw.line((100, 1250, 900, 1250), fill="black", width=2)  # footer, far below
+    assert trim_margins(page, pad=0).size == (801, 501)

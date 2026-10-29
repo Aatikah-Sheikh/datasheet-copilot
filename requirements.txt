@@ -2,6 +2,7 @@
 streamlit>=1.66
 openai>=3.40
 pypdf>=6.0
+pypdfium2>=5.0
 fonttools>=4.50
 pint>=0.26
 tavily-python>=0.8

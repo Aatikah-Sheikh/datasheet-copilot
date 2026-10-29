@@ -10,6 +10,7 @@ dark, with no server-side theme detection. Mixing an accent towards currentColor
 light backgrounds and lightens it on dark ones, which keeps it readable in both.
 """
 
+import base64
 import html
 import re
 
@@ -107,6 +108,12 @@ CSS = """
 .dc-quote .txt { font-size: 0.82rem; color: var(--ink); opacity: 0.88; line-height: 1.45; margin-top: 0.2rem; word-break: break-word; }
 .dc-quote.missing { border-left-color: var(--err); background: var(--err-tint); }
 .dc-quote.missing .ref { color: var(--err); }
+.dc-graph { border-left: 3px solid var(--src); background: var(--src-bg); border-radius: 0 6px 6px 0; padding: 0.5rem 0.65rem; margin-bottom: 0.5rem; }
+.dc-graph .ref { font-family: var(--mono); font-size: 0.74rem; color: var(--src); font-weight: 600; }
+.dc-graph .val { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--src); margin-top: 0.2rem; }
+.dc-graph .txt { font-size: 0.8rem; color: var(--ink); opacity: 0.88; line-height: 1.45; margin-top: 0.2rem; }
+.dc-graph summary { cursor: pointer; font-size: 0.76rem; color: var(--muted); margin-top: 0.35rem; }
+.dc-graph img { width: 100%; border-radius: 4px; margin-top: 0.4rem; background: #FFFFFF; }
 .dc-calc { border-left: 3px solid var(--calc); background: var(--calc-bg); border-radius: 0 6px 6px 0; padding: 0.5rem 0.65rem; margin-bottom: 0.5rem; }
 .dc-calc .expr { font-family: var(--mono); font-size: 0.84rem; color: var(--ink); word-break: break-word; }
 .dc-calc .in { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
@@ -239,6 +246,8 @@ def _cited_passages(answer: str, steps: list[Step]) -> list[tuple[str, int, str 
             query = str(step.arguments.get("query", ""))
             for hit in step.result.get("results", []):
                 retrieved.setdefault((hit["doc"], int(hit["page"])), _snippet(hit["text"], query))
+    for reading in _graph_readings(steps):  # a graph reading says more about its page than a text snippet
+        retrieved[(reading["doc"], int(reading["page"]))] = f'Graph reading: {reading["value"]}. {reading.get("reading") or ""}'
     seen, passages = set(), []
     for _, doc, pages in iter_citations(answer):
         for page in pages:
@@ -249,14 +258,19 @@ def _cited_passages(answer: str, steps: list[Step]) -> list[tuple[str, int, str 
     return passages
 
 
+def _graph_readings(steps: list[Step]) -> list[dict]:
+    return [s.result for s in steps if s.tool == "read_graph" and "error" not in s.result]
+
+
 def verification_summary(answer: str, steps: list[Step]) -> dict:
-    """Counts behind the badge under each answer: cited pages backed by a retrieved passage,
-    cited pages with no such passage, and successful calculator runs."""
+    """Counts behind the badge under each answer: cited pages backed by a retrieved passage or
+    graph reading, cited pages with neither, successful calculator runs and graph readings."""
     passages = _cited_passages(answer, steps)
     return {
         "verified": sum(1 for *_, quote in passages if quote is not None),
         "unverified": sum(1 for *_, quote in passages if quote is None),
         "calculations": sum(1 for s in steps if s.tool == "calculate" and "error" not in s.result),
+        "graphs": len(_graph_readings(steps)),
     }
 
 
@@ -267,6 +281,8 @@ def _plural(n: int, word: str) -> str:
 def verification_html(answer: str, steps: list[Step]) -> str:
     counts = verification_summary(answer, steps)
     calcs = f" · {_plural(counts['calculations'], 'calculation')} by the calculator" if counts["calculations"] else ""
+    if counts["graphs"]:
+        calcs += f" · {_plural(counts['graphs'], 'value')} read from graphs (approximate)"
     trace = f'<span class="dc-muted"> · {_plural(len(steps), "tool step")}, shown in the evidence panel</span>'
     if counts["unverified"]:
         mark, kind = "!", "warn"
@@ -297,6 +313,12 @@ def _step_html(step: Step) -> str:
         return f'<div class="dc-step"><span class="dc-tag">CALC</span>{html.escape(result["expression"])} <span class="dc-muted">&rarr; {html.escape(result["display"])}</span></div>'
     if step.tool == "web_search":
         return f'<div class="dc-step"><span class="dc-tag">WEB</span>&ldquo;{html.escape(str(args.get("query", "")))}&rdquo; <span class="dc-muted">&rarr; {len(result.get("results", []))} results</span></div>'
+    if step.tool == "read_graph":
+        figure = f' {html.escape(str(result["figure"]))}' if result.get("figure") else ""
+        return (
+            f'<div class="dc-step"><span class="dc-tag">GRAPH</span>{html.escape(result["doc"])} p.{result["page"]}{figure} '
+            f'<span class="dc-muted">&rarr; {html.escape(str(result["value"]))}</span></div>'
+        )
     if step.tool == "fetch_datasheet_pdf":
         return f'<div class="dc-step"><span class="dc-tag">LOAD</span>{html.escape(result["added"])} <span class="dc-muted">({result["pages"]} pages)</span></div>'
     return f'<div class="dc-step"><span class="dc-tag">{html.escape(step.tool.upper())}</span></div>'
@@ -328,6 +350,23 @@ def evidence_html(turn: dict, question: str) -> str:
                 f'<div class="dc-quote"><div class="ref">{html.escape(doc)} · p.{page}</div>'
                 f'<div class="txt">{html.escape(quote)}</div></div>'
             )
+    graphs = _graph_readings(steps)
+    if graphs:
+        parts.append(f'<div class="sec src"><span class="dot"></span>Graph readings <span class="count">{len(graphs)}</span></div>')
+    for reading in graphs:
+        figure = f' · {html.escape(str(reading["figure"]))}' if reading.get("figure") else ""
+        conditions = f'<div class="txt dc-muted">Curve: {html.escape(str(reading["conditions"]))}</div>' if reading.get("conditions") else ""
+        image = ""
+        if reading.get("_image"):
+            data = base64.b64encode(reading["_image"]).decode()
+            image = f'<details><summary>Show the page that was read</summary><img alt="Page {reading["page"]}" src="data:image/jpeg;base64,{data}"></details>'
+        parts.append(
+            f'<div class="dc-graph"><div class="ref">{html.escape(reading["doc"])} · p.{reading["page"]}{figure}</div>'
+            f'<div class="val">{html.escape(str(reading["value"]))}</div>'
+            f'<div class="txt">{html.escape(str(reading.get("reading") or ""))}</div>{conditions}'
+            f'<div class="txt dc-muted">Read by a vision model from a typical curve. Confidence: {html.escape(str(reading.get("confidence") or "not given"))}.</div>'
+            f"{image}</div>"
+        )
     parts.append(f'<div class="sec calc"><span class="dot"></span>Calculations <span class="count">{len(calcs)}</span></div>')
     if not calcs:
         parts.append('<div class="dc-muted" style="font-size:0.8rem">No calculations were needed.</div>')
@@ -348,7 +387,7 @@ def empty_evidence_html() -> str:
         '<div class="dc-ev"><div class="dc-panel-title">Evidence</div><div class="dc-empty-ev">'
         "Ask a question and this panel shows what the answer rests on."
         '<div class="row"><span class="sw" style="background:var(--src)"></span><span><b style="color:var(--ink)">Cited passages</b>: '
-        "the datasheet text behind every spec, by page.</span></div>"
+        "the datasheet text or graph behind every spec, by page.</span></div>"
         '<div class="row"><span class="sw" style="background:var(--calc)"></span><span><b style="color:var(--ink)">Calculations</b>: '
         "each expression, its inputs with units, and the result.</span></div>"
         '<div class="row"><span class="sw" style="background:var(--ok)"></span><span><b style="color:var(--ink)">Agent trace</b>: '
@@ -394,11 +433,12 @@ def usage_html(session_tokens: int, totals: dict, limits) -> str:
     )
 
 
-def models_html(reasoning: str, fast: str, web_search: bool) -> str:
+def models_html(reasoning: str, fast: str, vision: str, web_search: bool) -> str:
     return (
         '<div class="dc-models">'
         f"Reasoning <b>{html.escape(reasoning.split('/')[-1])}</b><br>"
         f"Spec cards <b>{html.escape(fast.split('/')[-1])}</b><br>"
+        f"Graphs <b>{html.escape(vision.split('/')[-1])}</b><br>"
         "Inference <b>Nebius Token Factory</b><br>"
         f"Web search <b>{'Tavily' if web_search else 'off'}</b></div>"
     )

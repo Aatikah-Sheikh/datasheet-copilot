@@ -15,15 +15,18 @@ MAX_TOOL_RESULT_CHARS = 12000
 # not followed by "(" (that would be a Markdown link).
 CITATION = re.compile(r"\[([^\[\]\n]{3,160}?)\](?!\()")
 _CITATION_DOC = re.compile(r"(.+?)\s+pp?\.\s*\d")
+# A label before the document name, e.g. "read_graph: lm358.pdf p.23" or "Source: lm358.pdf p.4"
+_CITATION_LABEL = re.compile(r"^[A-Za-z_ ]{2,30}:\s*")
 _NUMBER = re.compile(r"\d{1,4}")
 
 
 def parse_citation(inner: str) -> tuple[str, list[int]] | None:
     """('lm358.pdf', [1, 4]) for 'lm358.pdf p.1 & p.4'; None if the bracket is not a page citation."""
-    match = _CITATION_DOC.match(inner.strip())
+    inner = _CITATION_LABEL.sub("", inner.strip())
+    match = _CITATION_DOC.match(inner)
     if not match:
         return None
-    return match.group(1).strip(), [int(n) for n in _NUMBER.findall(inner.strip()[match.end(1):])]
+    return match.group(1).strip(), [int(n) for n in _NUMBER.findall(inner[match.end(1):])]
 
 
 def iter_citations(text: str):
@@ -36,14 +39,15 @@ def iter_citations(text: str):
 SYSTEM_PROMPT = """You are Datasheet Copilot, a design assistant for electronics engineers and students who work from component datasheets.
 
 Rules:
-1. Ground every datasheet fact in a search_datasheets result and cite it inline as [<document> p.<page>], with the square brackets, including inside tables. If the loaded datasheets do not state a value, say so plainly. Never guess or recall a spec from memory.
+1. Ground every datasheet fact in a search_datasheets or read_graph result and cite it inline as [<document> p.<page>], e.g. [lm358.pdf p.23]: square brackets, the document name only (no tool name), including inside tables. If the loaded datasheets do not state a value, say so plainly. Never guess or recall a spec from memory.
 2. Do every numerical calculation with the calculate tool, passing inputs with units. Never do arithmetic yourself: any number you derive (a ratio, unit conversion, dB value or margin) must come from a calculate call in this turn. Quote the tool's result, and never say you used the calculator unless you called it.
 3. State assumptions (operating conditions, temperature, load). For design margins use worst-case (min/max) values rather than typical, and say which you used.
 4. If a datasheet you need is not loaded, find the manufacturer's PDF with web_search (if available) and load it with fetch_datasheet_pdf, then search it. Prefer manufacturer domains.
-5. Structure answers as: the answer first; then "Working" listing each value used with its citation, the calculation and the result; then caveats. Be concise.
-6. Search in every turn. Results from earlier turns in the conversation are not evidence for this answer. Never describe a search you did not run: the Working section must match the tool calls you actually made.
-7. Be economical. When you need several values, request all the searches together in one step (several tool calls at once), and stop searching once you have what you need. For comparisons, cover the five or six specs that matter most, not every row of the datasheet.
-8. Use British English."""
+5. Some values appear only in graphs (typical-characteristics curves). If read_graph is available, find the graph's page with search_datasheets (figure captions are in the page text), then call read_graph with that page and a question naming the figure, the x value and the condition. Give graph readings as approximate (≈), say they come from a typical curve rather than a guaranteed limit, and cite the page.
+6. Structure answers as: the answer first; then "Working" listing each value used with its citation, the calculation and the result; then caveats. Be concise.
+7. Search in every turn. Results from earlier turns in the conversation are not evidence for this answer. Never describe a search you did not run: the Working section must match the tool calls you actually made.
+8. Be economical. When you need several values, request all the searches together in one step (several tool calls at once), and stop searching once you have what you need. For comparisons, cover the five or six specs that matter most, not every row of the datasheet.
+9. Use British English."""
 
 FINAL_NUDGE = (
     "Stop calling tools. Give your best answer now from the results above. Cite every value as "
@@ -82,12 +86,23 @@ def _library_context(toolbox: ToolBox) -> str:
 
 
 def retrieved_pages(steps: list[Step]) -> set[tuple[str, int]]:
-    return {
+    """Pages this turn actually looked at: search hits and pages whose graphs were read."""
+    pages = {
         (hit["doc"], int(hit["page"]))
         for step in steps
         if step.tool == "search_datasheets"
         for hit in step.result.get("results", [])
     }
+    return pages | {
+        (step.result["doc"], int(step.result["page"]))
+        for step in steps
+        if step.tool == "read_graph" and "error" not in step.result
+    }
+
+
+def for_model(result: dict) -> str:
+    """A tool result as sent to the model: JSON without the UI-only "_" keys, truncated."""
+    return json.dumps({k: v for k, v in result.items() if not k.startswith("_")}, ensure_ascii=False)[:MAX_TOOL_RESULT_CHARS]
 
 
 def unsupported_citations(answer: str, steps: list[Step]) -> list[tuple[str, int]]:
@@ -196,7 +211,7 @@ def run_agent(
                 {
                     "role": "tool",
                     "tool_call_id": call.id,
-                    "content": json.dumps(result)[:MAX_TOOL_RESULT_CHARS],
+                    "content": for_model(result),
                 }
             )
     # Reasoning off for the forced answer: with it on, Nemotron can spend the whole output
