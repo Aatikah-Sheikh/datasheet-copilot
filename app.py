@@ -1,5 +1,6 @@
 """Datasheet Copilot: Streamlit front end."""
 
+import hashlib
 import os
 from pathlib import Path
 
@@ -30,7 +31,7 @@ from copilot import ui  # noqa: E402
 from copilot.agent import Step, run_agent  # noqa: E402
 from copilot.config import Settings  # noqa: E402
 from copilot.fetch import FetchError, download_pdf  # noqa: E402
-from copilot.library import Library  # noqa: E402
+from copilot.library import Library, extract_pages  # noqa: E402
 from copilot.llm import make_client  # noqa: E402
 from copilot.specs import extract_spec_card  # noqa: E402
 from copilot.tools import ToolBox  # noqa: E402
@@ -60,6 +61,33 @@ def _usage_store() -> UsageStore:
     return UsageStore(Path(__file__).resolve().parent / "usage.json")
 
 
+@st.cache_data(ttl="1d", max_entries=32, show_spinner=False)
+def _download(url: str) -> tuple[str, bytes]:
+    """Shared across sessions, so the sample loads instantly for every visitor after the first.
+    Failed downloads raise and are not cached."""
+    return download_pdf(url)
+
+
+@st.cache_data(ttl="1d", max_entries=32, show_spinner=False)
+def _pages(data: bytes) -> list[str]:
+    """PDF text extraction takes ~10 s for a 68-page datasheet; cache it by file content."""
+    return extract_pages(data)
+
+
+class _NoCard(Exception):
+    """Raised inside the cached function so an empty spec card is retried rather than cached."""
+
+
+@st.cache_data(ttl="7d", max_entries=64, show_spinner=False)
+def _cached_card(name: str, digest: str, _client, _library) -> dict:
+    """Spec cards keyed by document name and text, so the same datasheet costs Nano tokens once.
+    Arguments starting with _ are not part of the cache key."""
+    card = extract_spec_card(_client, settings.fast_model, _library, name)
+    if not card:
+        raise _NoCard(name)
+    return card
+
+
 def _state():
     s = st.session_state
     if "library" not in s:
@@ -72,7 +100,7 @@ def _state():
 
 
 def _add_document(s, client, name: str, data: bytes) -> None:
-    pages_with_text = s.library.add_pdf(name, data)
+    pages_with_text = s.library.add_pages(name, _pages(data))
     if pages_with_text == 0:
         s.library.remove(name)
         st.sidebar.error(f"{name}: no extractable text. It is probably a scanned PDF.")
@@ -83,7 +111,7 @@ def _add_document(s, client, name: str, data: bytes) -> None:
 def _load_url(s, client, url: str) -> None:
     try:
         with st.spinner("Downloading datasheet..."):
-            name, data = download_pdf(url.strip())
+            name, data = _download(url.strip())
         _add_document(s, client, name, data)
     except FetchError as exc:
         st.sidebar.error(str(exc))
@@ -93,8 +121,11 @@ def _make_card(s, client, name: str) -> None:
     if client is None or name in s.cards:
         return
     try:
+        text = "".join(body for _, body in s.library.first_pages(name, count=3))
         with st.spinner(f"Reading {name} with Nemotron Nano..."):
-            s.cards[name] = extract_spec_card(client, settings.fast_model, s.library, name)
+            s.cards[name] = _cached_card(name, hashlib.sha256(text.encode()).hexdigest(), client, s.library)
+    except _NoCard:
+        s.cards[name] = None
     except APIError as exc:
         s.cards[name] = None
         st.sidebar.warning(f"Spec card for {name} failed: {exc.message}")

@@ -4,8 +4,12 @@ A design assistant for electronics engineers and students that answers questions
 
 Built for the Nebius x NVIDIA Global AI Hackathon (Best Apps and Agents track). It runs on **NVIDIA Nemotron** open models served by **Nebius Token Factory**.
 
-- **Live demo:** https://datasheet-copilot.streamlit.app/
+- **Live demo:** https://datasheet-copilot.streamlit.app/ (if it has been idle, Streamlit takes about 30 seconds to wake it)
 - **Licence:** [MIT](LICENSE) (OSI-approved)
+
+![Datasheet Copilot answering a comparison: the cited answer on the left, and on the right the evidence panel with the datasheet passages, the calculation and the agent trace (web search, datasheet download, searches, calculation)](docs/answer-and-evidence.jpg)
+
+*Asked to compare the TI OPA350 with the loaded LM358, the agent found the OPA350 datasheet with Tavily, downloaded it, searched both, and computed the ratio with the calculator. Every value carries a page citation, and the evidence panel shows the passage behind each one.*
 
 ## The problem
 
@@ -16,7 +20,7 @@ Datasheet Copilot is built so that each answer can be checked:
 - **Specs come only from the loaded datasheets**, cited inline as `[document p.N]`. If the datasheet does not state a value, the app says so rather than guessing.
 - **The model does no arithmetic itself.** Every calculation goes through a unit-aware calculator (`pint`), so it catches mistakes like adding volts to amps.
 - **Every step is shown.** The evidence panel beside each answer shows the exact passage behind each citation, and a trace of every search (with the pages it hit), web lookup, download and calculation (inputs with units → result).
-- **The app checks the model.** After each answer, every `[doc p.N]` citation is compared with the pages actually retrieved in that turn, and any claim of using the calculator is compared with the calculate calls actually made. An answer that fails is sent back once to verify or remove the claim.
+- **The app checks the model.** After each answer, every `[doc p.N]` citation is compared with the pages actually retrieved in that turn, and any claim of using the calculator is compared with the calculate calls actually made. An answer that fails is sent back once to verify or remove the claim, and a badge under every answer shows the result: how many cited pages were matched to retrieved passages, or which were not.
 
 ## What it does
 

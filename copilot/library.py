@@ -53,6 +53,11 @@ class Chunk:
     text: str
 
 
+def extract_pages(data: bytes) -> list[str]:
+    """Text of each page of a PDF ("" for pages with no text layer)."""
+    return [page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages]
+
+
 class Library:
     def __init__(self) -> None:
         self.chunks: list[Chunk] = []
@@ -64,9 +69,7 @@ class Library:
 
     def add_pdf(self, name: str, data: bytes) -> int:
         """Index a PDF. Returns the number of pages that had extractable text."""
-        reader = PdfReader(io.BytesIO(data))
-        pages = [page.extract_text() or "" for page in reader.pages]
-        return self.add_pages(name, pages)
+        return self.add_pages(name, extract_pages(data))
 
     def add_pages(self, name: str, pages: list[str]) -> int:
         self.remove(name)

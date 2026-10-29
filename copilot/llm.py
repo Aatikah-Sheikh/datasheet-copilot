@@ -21,7 +21,9 @@ _BARE_CITATION = re.compile(
 def make_client(settings: Settings) -> OpenAI:
     if not settings.api_key:
         raise RuntimeError("NEBIUS_API_KEY is not set. Add it to .env or Streamlit secrets.")
-    return OpenAI(base_url=settings.base_url, api_key=settings.api_key)
+    # Retries cover rate limits, 5xx and dropped connections (the SDK backs off between tries);
+    # the timeout stops a stalled request leaving a visitor watching a spinner indefinitely.
+    return OpenAI(base_url=settings.base_url, api_key=settings.api_key, timeout=120, max_retries=3)
 
 
 def _bracket_bare_citations(text: str) -> str:

@@ -153,6 +153,19 @@ def test_multi_page_citation_checks_each_page_and_ignores_links():
     assert unsupported_citations(answer, steps) == [("a.pdf", 4)]
 
 
+def test_verification_badge_counts_backed_and_unbacked_citations():
+    from copilot.ui import verification_html, verification_summary
+
+    steps = [
+        Step("search_datasheets", {"query": "x"}, {"results": [{"doc": "a.pdf", "page": 1, "text": "x"}]}),
+        Step("calculate", {"expression": "1+1"}, {"expression": "1+1", "display": "2"}),
+        Step("calculate", {"expression": "V+I"}, {"error": "units"}),
+    ]
+    assert verification_summary("A [a.pdf p.1] B [a.pdf p.1 & p.4].", steps) == {"verified": 1, "unverified": 1, "calculations": 1}
+    assert "not found" in verification_html("A [a.pdf p.1 & p.4].", steps)
+    assert "Grounding check passed" in verification_html("A [a.pdf p.1].", steps)
+
+
 def test_clean_converts_latex_and_citation_brackets():
     from copilot.llm import clean
 

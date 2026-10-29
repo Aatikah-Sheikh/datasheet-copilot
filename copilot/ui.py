@@ -74,7 +74,15 @@ CSS = """
 [data-testid="stChatMessageContent"] table { display: block; max-width: 100%; overflow-x: auto; }
 [data-testid="stChatMessageContent"] td, [data-testid="stChatMessageContent"] th { overflow-wrap: anywhere; min-width: 6rem; }
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { background: var(--user); }
-.dc-trace-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
+/* Grounding badge under each answer */
+.dc-verify { display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.8rem; line-height: 1.45; margin-top: 0.5rem;
+  padding: 0.45rem 0.65rem; border-radius: 7px; border: 1px solid var(--line); background: var(--raised); }
+.dc-verify .mark { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem;
+  border-radius: 50%; font-size: 0.7rem; font-weight: 700; background: var(--line); margin-top: 0.08rem; }
+.dc-verify.ok { border-color: var(--ok-tint); background: color-mix(in srgb, #A6E01F 7%, transparent); }
+.dc-verify.ok .mark { background: var(--ok-tint); color: var(--ok); } .dc-verify.ok b { color: var(--ok); }
+.dc-verify.warn { border-color: var(--err-tint); background: var(--err-tint); }
+.dc-verify.warn .mark { background: var(--err-tint); color: var(--err); } .dc-verify.warn b { color: var(--err); }
 
 /* Chips */
 .dc-cite { display: inline-block; font-family: var(--mono); font-size: 0.76em; line-height: 1.55; background: var(--src-tint);
@@ -209,7 +217,7 @@ def render_turn(turn: dict) -> None:
             st.markdown(format_answer(turn["content"]), unsafe_allow_html=True)
             steps = turn.get("steps", [])
             if steps:
-                st.html(f'<div class="dc-trace-note">{len(steps)} tool steps · evidence in the right-hand panel</div>')
+                st.html(verification_html(turn["content"], steps))
         else:
             st.markdown(turn["content"])
 
@@ -239,6 +247,40 @@ def _cited_passages(answer: str, steps: list[Step]) -> list[tuple[str, int, str 
                 seen.add(key)
                 passages.append((*key, retrieved.get(key)))
     return passages
+
+
+def verification_summary(answer: str, steps: list[Step]) -> dict:
+    """Counts behind the badge under each answer: cited pages backed by a retrieved passage,
+    cited pages with no such passage, and successful calculator runs."""
+    passages = _cited_passages(answer, steps)
+    return {
+        "verified": sum(1 for *_, quote in passages if quote is not None),
+        "unverified": sum(1 for *_, quote in passages if quote is None),
+        "calculations": sum(1 for s in steps if s.tool == "calculate" and "error" not in s.result),
+    }
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def verification_html(answer: str, steps: list[Step]) -> str:
+    counts = verification_summary(answer, steps)
+    calcs = f" · {_plural(counts['calculations'], 'calculation')} by the calculator" if counts["calculations"] else ""
+    trace = f'<span class="dc-muted"> · {_plural(len(steps), "tool step")}, shown in the evidence panel</span>'
+    if counts["unverified"]:
+        mark, kind = "!", "warn"
+        text = (
+            f'<b>{counts["unverified"]} of {counts["verified"] + counts["unverified"]} cited pages not found</b> '
+            f"in the retrieved passages: check them in the evidence panel{calcs}"
+        )
+    elif counts["verified"]:
+        mark, kind = "&#10003;", "ok"
+        text = f'<b>Grounding check passed</b> · {_plural(counts["verified"], "cited page")} matched to retrieved passages{calcs}{trace}'
+    else:
+        mark, kind = "i", ""
+        text = f"No datasheet pages cited{calcs}{trace}"
+    return f'<div class="dc-verify {kind}"><span class="mark">{mark}</span><span>{text}</span></div>'
 
 
 def _step_html(step: Step) -> str:
