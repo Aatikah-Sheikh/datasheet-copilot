@@ -102,7 +102,12 @@ def _state():
 
 
 def _add_document(s, client, name: str, data: bytes) -> None:
-    pages_with_text = s.library.add_pages(name, _pages(data), data)
+    try:
+        pages = _pages(data)
+    except Exception:  # pypdf raises many types for damaged files
+        st.sidebar.error(f"{name}: could not read this PDF. It may be damaged or encrypted.")
+        return
+    pages_with_text = s.library.add_pages(name, pages, data)
     if pages_with_text == 0:
         s.library.remove(name)
         st.sidebar.error(f"{name}: no extractable text. It is probably a scanned PDF.")

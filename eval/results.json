@@ -1,0 +1,380 @@
+[
+  {
+    "id": "Q1",
+    "kind": "lookup",
+    "question": "According to TI's LM358 datasheet, what is the absolute maximum supply voltage of the LM358B?",
+    "expected": "40 V (±20 V)",
+    "plain": {
+      "answer": "The LM358B’s absolute‑maximum supply voltage is **32 V** (i.e., V⁺–V⁻ ≤ 32 V), which corresponds to a maximum of **+16 V / –16 V** for split‑supply operation.",
+      "correct": false,
+      "tokens": 260
+    },
+    "copilot": {
+      "answer": "The absolute‑maximum supply voltage for the LM358B is **40 V** (i.e., VS(max)=40 V, which corresponds to a dual‑supply rating of ±20 V)[lm358.pdf p.4].  \n\n**Working**  \n- Searched “LM358B absolute maximum supply voltage” in the LM358 datasheet → found the Absolute Maximum Ratings table on page 4.  \n- The table lists: “Supply voltage, VS = ([V+] – [V–]) … LM358B, LM358BA, LM2904B, LM2904BA ±20 or 40 V”.  \n- Therefore the maximum allowable single‑supply voltage is 40 V (±20 V for split supplies).  \n\n**Caveat**  \nThis is an absolute‑maximum rating; operation should be kept within the recommended operating range (typically up to 30 V or 36 V depending on the version) to ensure reliable performance.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5475
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain gave 32 V, the rating of the original LM358, not the B version."
+    }
+  },
+  {
+    "id": "Q2",
+    "kind": "lookup",
+    "question": "According to TI's LM358 datasheet, what is the absolute maximum supply voltage of the original LM358 (not the B version)?",
+    "expected": "32 V (±16 V)",
+    "plain": {
+      "answer": "The absolute‑maximum supply voltage for the original LM358 (non‑B) is **32 V** (i.e., VCC–VEE ≤ 32 V, corresponding to ±16 V for split‑supply operation).",
+      "correct": true,
+      "tokens": 465
+    },
+    "copilot": {
+      "answer": "The absolute maximum supply voltage for the original LM358 (non‑B version) is **32 V** (i.e., the maximum voltage difference between V⁺ and V⁻)[lm358.pdf p.4].  \n\n**Working**  \n- Searched for “LM358 absolute maximum supply voltage” → found the Absolute Maximum Ratings table in lm358.pdf, page 4.  \n- The table lists:  \n  - “LM158, LM258, LM358, LM158A, LM258A, LM358A, LM2904V ±16 or 32 V” for Supply voltage, VS = ([V+] – [V–]).  \n- Interpreting the “±16 or 32 V” entry as the maximum allowable single‑supply voltage (V+ relative to V–) gives 32 V.  \n\n**Caveat**  \nThis value is the absolute maximum rating; exceeding it may cause permanent damage. Recommended operating conditions are lower (typically up to 30 V single supply). Always verify the specific part variant and temperature range in the datasheet.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5270
+    },
+    "reviewed": {
+      "plain": true,
+      "copilot": true,
+      "note": ""
+    }
+  },
+  {
+    "id": "Q3",
+    "kind": "lookup",
+    "question": "According to TI's LM358 datasheet, what is the maximum input offset voltage of the LM358A at 25 °C?",
+    "expected": "3 mV",
+    "plain": {
+      "answer": "The LM358A’s maximum input‑offset voltage at 25 °C is **±2 mV**.",
+      "correct": false,
+      "tokens": 249
+    },
+    "copilot": {
+      "answer": "The maximum input offset voltage of the LM358A at 25 °C is **3 mV**[lm358.pdf p.10].  \n\n**Working**  \n- From the LM358/LM358A electrical‑characteristics table (page 10):  \n  - Parameter: Input offset voltage (VOS)  \n  - Conditions: VS = 5 V to 30 V, VCM = 0 V, VO = 1.4 V, TA = 25 °C  \n  - Values for LM358A: MIN = 2 mV, MAX = 3 mV (units mV)[lm358.pdf p.10]  \n- No further calculation is needed; the specification directly gives the maximum value.  \n\n**Caveats**  \n- This limit applies for the stated test conditions (supply voltage 5 V–30 V, common‑mode voltage 0 V, output 1.4 V) and temperature 25 °C.  \n- The value is a guaranteed maximum; typical parts may exhibit lower offset.  \n- Ensure the part variant is indeed the LM358A (the “A” suffix denotes the improved offset specification).",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 6167
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain gave 2 mV, the typical value. Copilot's value is right, but it labelled the 2 mV typical as the minimum."
+    }
+  },
+  {
+    "id": "Q4",
+    "kind": "lookup",
+    "question": "According to TI's LM358 datasheet, what is the gain-bandwidth product of the original LM358 (not the B version)?",
+    "expected": "0.7 MHz",
+    "plain": {
+      "answer": "The original LM358 has a typical gain‑bandwidth product (unity‑gain bandwidth) of **≈ 1 MHz**.",
+      "correct": false,
+      "tokens": 335
+    },
+    "copilot": {
+      "answer": "**Answer:** The gain‑bandwidth product (GBW) of the original LM358 (non‑B version) is **0.7 MHz**.\n\n**Working**\n\n**Working**\n- GBW value taken from the “Frequency Response” line in the electrical‑characteristics table for LM358/LM358A:  \n  *“GBW Gain bandwidth product 0.7 MHz”*[lm358.pdf p.10]  \n- This entry applies to the standard LM358 (the B‑version has a higher GBW of 1.2 MHz).\n\n**Caveats**\n- The quoted 0.7 MHz is the typical (TYP) value given for $V_S = 5\\text{ V}$ and $T_A = 25^\\circ\\text{C}$. Minimum/maximum limits are not separately specified in the datasheet; therefore the figure should be treated as a typical characteristic rather than a guaranteed limit.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5894
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain said about 1 MHz."
+    }
+  },
+  {
+    "id": "Q5",
+    "kind": "lookup",
+    "question": "According to TI's LM358 datasheet, what is the slew rate of the LM358B?",
+    "expected": "0.5 V/µs",
+    "plain": {
+      "answer": "0.5 V/µs",
+      "correct": true,
+      "tokens": 261
+    },
+    "copilot": {
+      "answer": "**Answer:** The LM358B has a slew rate of **0.5 V/µs**.\n\n**Working**\n- From the LM358 datasheet, under “7.3.2 Slew Rate”: *“These devices have a 0.5‑V/µs slew rate (B Version)”*[lm358.pdf p.26].\n\n**Caveats**\n- This value applies to the B‑version (LM358B/LM2904B) under typical test conditions (unity gain, room temperature). Minimum/maximum limits over temperature are not given in the excerpt; if worst‑case limits are needed, consult the full electrical‑characteristics tables.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5681
+    },
+    "reviewed": {
+      "plain": true,
+      "copilot": true,
+      "note": ""
+    }
+  },
+  {
+    "id": "Q6",
+    "kind": "calculation",
+    "question": "Using TI's LM358 datasheet, what closed-loop bandwidth can I expect from an LM358B in a non-inverting gain of 20?",
+    "expected": "60 kHz (1.2 MHz / 20)",
+    "plain": {
+      "answer": "≈ 50 kHz (typical closed‑loop bandwidth for a gain of 20, based on the LM358B’s ~1 MHz gain‑bandwidth product). This corresponds to a range of roughly 35–60 kHz when accounting for the device’s GBW tolerance.",
+      "tokens": 420,
+      "correct": true
+    },
+    "copilot": {
+      "answer": "**Closed‑loop bandwidth ≈ 60 kHz**\n\n**Working**\n- From the LM358B data sheet, the unity‑gain bandwidth (gain‑bandwidth product, GBW) is **1.2 MHz**[lm358.pdf p.26].\n- Desired non‑inverting gain $G = 20$.\n- Closed‑loop bandwidth is calculated as  \n  $$f_{\\text{BW}} = \\frac{\\text{GBW}}{G}$$\n- Using the calculate tool:  \n  `1.2 MHz / 20 → 60 kHz`[calculate result].\n\nThus,\n$$f_{\\text{BW}} = \\frac{1.2\\ \\text{MHz}}{20}=60\\ \\text{kHz}$$\n\n**Caveats**\n- This estimate assumes ideal feedback resistors giving exactly a gain of 20, operation within the linear region, and negligible loading effects.\n- The GBW value is a typical (minimum‑guaranteed) figure for the B‑version; actual bandwidth may shift with supply voltage, temperature, and parasitic capacitances. For a guaranteed minimum, use the worst‑case GBW if specified.",
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "calculate"
+      ],
+      "tokens": 14225,
+      "correct": true,
+      "cites_expected_page": true,
+      "used_calculator": true
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "First run: right value, but the copilot wrote that it used the calculate tool without calling it, and the check missed \"**calculate** tool\" because of the Markdown. Fixed in copilot/agent.py; on the rerun shown it calls calculate. Plain used about 1 MHz and answered about 50 kHz (the automatic score matched a side remark, \"35–60 kHz\")."
+    }
+  },
+  {
+    "id": "Q7",
+    "kind": "calculation",
+    "question": "Using TI's LM358 datasheet, how much margin does a 24 V supply rail leave below the absolute maximum supply voltage of the original LM358 (not the B version)?",
+    "expected": "8 V (32 V − 24 V)",
+    "plain": {
+      "answer": "The original LM358 has an absolute‑maximum supply voltage of **32 V**.  \nWith a 24 V supply rail, the margin below this limit is:\n\n$$32\\ \\text{V} - 24\\ \\text{V} = \\boxed{8\\ \\text{V}}$$",
+      "correct": true,
+      "tokens": 444
+    },
+    "copilot": {
+      "answer": "The LM358’s absolute‑maximum supply voltage is **32 V** (the “±16 or 32 V” entry for the LM358 family).  \nWith a 24 V supply rail, the margin below that limit is **8 V**.\n\n**Working**\n\n| Value | Source |\n|-------|--------|\n| Absolute‑maximum supply voltage (LM358) = 32 V | [lm358.pdf p.4] – “LM158, LM258, LM358, LM158A, LM258A, LM358A, LM2904V ±16 or 32 V” |\n| Applied supply rail = 24 V | Given in the question |\n| Margin = 32 V − 24 V = 8 V | Calculated: `32 - 24` → 8 V |\n\n**Calculation**  \nUsing the calculate tool: `32 - 24` → **8** (unit V)[calculate].\n\n**Caveats**  \n- The 32 V limit applies to the total supply voltage (V+ − V‑) for the standard LM358 (non‑B) parts.  \n- This is an absolute‑maximum rating; operation should stay within the recommended operating range (typically up to 30 V for the LM358) to ensure reliability.  \n- Temperature effects on the absolute‑maximum rating are not specified in the excerpt; assume the rating holds over the operating temperature range.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "calculate",
+        "calculate"
+      ],
+      "tokens": 12766,
+      "used_calculator": true
+    },
+    "reviewed": {
+      "plain": true,
+      "copilot": true,
+      "note": "Both right."
+    }
+  },
+  {
+    "id": "Q8",
+    "kind": "calculation",
+    "question": "Using TI's LM358 datasheet, what worst-case output error does the LM358's maximum input offset voltage over 0 °C to 70 °C cause at a gain of 100?",
+    "expected": "0.9 V (9 mV × 100)",
+    "plain": {
+      "answer": "The LM358’s maximum input‑offset voltage over the 0 °C → 70 °C range is ±7 mV (from the TI datasheet).  \nWith a closed‑loop gain of 100, the worst‑case output error is:\n\n$$\\text{Error}_{\\text{out}} = V_{OS,\\max}\\times \\text{Gain}= (±7\\text{ mV})\\times 100 = ±0.7\\text{ V}$$\n\nSo the LM358 can introduce up to **±0.7 V** of error at the output when configured for a gain of 100 over that temperature span.",
+      "correct": false,
+      "tokens": 1069
+    },
+    "copilot": {
+      "answer": "**Answer:** The worst‑case output error caused by the LM358’s maximum input offset voltage over 0 °C to 70 °C at a gain of 100 is **0.9 V**.\n\n**Working**\n\n| Item | Value | Source |\n|------|-------|--------|\n| Maximum input offset voltage (VOS,max) for LM358 over 0 °C → 70 °C | 9 mV | [lm358.pdf p.10] – “TA = 0°C to 70°C … 9” under OFFSET VOLTAGE |\n| Gain (G) | 100 (given) | — |\n| Output error (EO) = VOS,max × G | ? | — |\n\nCalculation performed with the calculate tool:\n\n```\nExpression: Vos * Gain\nVariables: Vos = \"9 mV\", Gain = \"100\"\nResult unit: V\nResult: 0.9 V\n```\n\nThus, $E_O = 9\\ \\text{mV} \\times 100 = 0.9\\ \\text{V}$.\n\n**Caveats**\n\n- The 9 mV figure is the *maximum* (worst‑case) input offset voltage specified for the LM358 over the 0 °C to 70 °C temperature range; typical values are lower (≈ 3–7 mV).  \n- This calculation assumes the offset voltage adds linearly at the output and ignores other error sources (bias current, CMRR, PSRR, etc.).  \n- The gain of 100 must be realizable with the chosen feedback network while staying within the LM358’s output swing and bandwidth limits; if the circuit cannot achieve that gain, the actual error will differ.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "calculate"
+      ],
+      "tokens": 15852,
+      "used_calculator": true
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain used 7 mV, the 25 °C maximum, instead of 9 mV over 0 °C to 70 °C."
+    }
+  },
+  {
+    "id": "Q9",
+    "kind": "lookup",
+    "question": "According to TI's OPA350 datasheet, what is the OPA350's gain-bandwidth product?",
+    "expected": "38 MHz",
+    "plain": {
+      "answer": "The OPA350’s gain‑bandwidth product is **10 MHz**.",
+      "correct": false,
+      "tokens": 321
+    },
+    "copilot": {
+      "answer": "The OPA350’s gain‑bandwidth product (GBW) is **38 MHz**[opa350.pdf p.6].  \n\n**Working**  \n- From the “FREQUENCY RESPONSE (CL = 100 pF)” table in the OPA350 datasheet: GBW Gain‑bandwidth product G = 1 → **38 MHz**[opa350.pdf p.6].  \n\nNo further calculation was needed.  \n\n*Note:* This value is given for a gain of 1 (unity‑gain bandwidth) and applies to the OPA350 variant described in the datasheet.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5228
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain said 10 MHz."
+    }
+  },
+  {
+    "id": "Q10",
+    "kind": "lookup",
+    "question": "According to TI's OPA350 datasheet, what is the OPA350's absolute maximum supply voltage?",
+    "expected": "7 V",
+    "plain": {
+      "answer": "7 V (maximum voltage difference between V⁺ and V⁻).",
+      "correct": true,
+      "tokens": 414
+    },
+    "copilot": {
+      "answer": "**Answer:** The OPA350’s absolute‑maximum supply voltage is **7 V**.\n\n**Working**\n- Searched the OPA350 datasheet for “absolute maximum supply voltage” → found the specification on page 4:  \n  *“Supply voltage … MIN MAX UNIT … 7 V”*[opa350.pdf p.4].\n\nNo further calculations were needed.\n\n**Caveat:** This is the stress rating; exceeding it may cause permanent damage. Normal operation should stay within the recommended supply range given elsewhere in the datasheet.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 4923
+    },
+    "reviewed": {
+      "plain": true,
+      "copilot": true,
+      "note": ""
+    }
+  },
+  {
+    "id": "Q11",
+    "kind": "lookup",
+    "question": "According to TI's OPA350 datasheet, what is the OPA350's input voltage noise density at 10 kHz?",
+    "expected": "7 nV/√Hz",
+    "plain": {
+      "answer": "The OPA350’s input voltage‑noise density is specified as **≈ 8 nV/√Hz** (typical) and remains essentially flat through the audio‑to‑low‑RF range, so at 10 kHz it is about **8 nV/√Hz**.",
+      "correct": false,
+      "tokens": 618
+    },
+    "copilot": {
+      "answer": "**Answer:**  \nThe OPA350’s input voltage noise density at 10 kHz is **7 nV/√Hz**.\n\n**Working**\n\n| Parameter | Value | Source |\n|-----------|-------|--------|\n| Input voltage noise density, $f = 10\\text{ kHz}$ | 7 nV/√Hz | [opa350.pdf p.6] |\n\nNo further calculation is needed because the specification is given directly in the electrical characteristics table.\n\n**Caveat**  \nThis value is taken from the “Electrical Characteristics” table under the test condition $V_S = 5$ V, $T_A = 25^\\circ$C, representing a typical (not guaranteed minimum/maximum) specification.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets"
+      ],
+      "tokens": 5650
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain said 8 nV/√Hz."
+    }
+  },
+  {
+    "id": "Q12",
+    "kind": "calculation",
+    "question": "Using TI's OPA350 and LM358 datasheets, how many times faster is the OPA350's slew rate than the LM358B's?",
+    "expected": "44 times (22 V/µs ÷ 0.5 V/µs)",
+    "plain": {
+      "answer": "The OPA350’s typical slew rate is **20 V/µs**.  \nThe LM358B’s typical slew rate is **0.3 V/µs**.\n\n$$\\frac{20\\ \\text{V/µs}}{0.3\\ \\text{V/µs}} \\approx 66.7$$\n\nSo the OPA350 is **about 67 times faster** in slew rate than the LM358B.",
+      "correct": false,
+      "tokens": 1934
+    },
+    "copilot": {
+      "answer": "**Answer:**  \nThe OPA350’s slew rate is **44 times** faster than the LM358B’s slew rate.\n\n**Working**\n\n| Parameter | Value | Source |\n|-----------|-------|--------|\n| OPA350 slew rate (typical) | 22 V/µs | “high speed operation (38 MHz, 22 V/µs)” – [opa350.pdf p.12] |\n| LM358B slew rate (typical) | 0.5 V/µs | “These devices have a 0.5‑V/µs slew rate (B Version)” – [lm358.pdf p.26] |\n\nCalculation (using the calculate tool):  \n\n$$\\frac{22\\;\\text{V/µs}}{0.5\\;\\text{V/µs}} = 44$$\n\nResult: **44** (dimensionless).\n\n**Caveats**  \n- Both values are typical (not guaranteed minimum/maximum) slew rates taken from the respective datasheets.  \n- The comparison assumes the same operating conditions (single‑supply, room temperature) as implied by the typical‑value statements.  \n- If worst‑case (min/max) limits were required, the ratio could differ; however, the datasheets do not provide explicit min/max slew‑rate limits for these parts.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "search_datasheets",
+        "search_datasheets",
+        "calculate"
+      ],
+      "tokens": 18461,
+      "used_calculator": true
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain used 20 V/µs and 0.3 V/µs and got about 67 times."
+    }
+  },
+  {
+    "id": "Q13",
+    "kind": "graph",
+    "question": "Using TI's LM358 datasheet, on a 15 V supply, what is the largest output swing the LM358 can deliver at 20 kHz?",
+    "expected": "≈ 4.5 Vp-p (Figure 5-45, typical curve)",
+    "plain": {
+      "answer": "The LM358’s slew‑rate limits the sinusoidal output at 20 kHz.  \nUsing the typical slew‑rate SR ≈ 0.5 V/µs:\n\n$$V_{pp,\\max} \\approx \\frac{SR}{\\pi f}\n               = \\frac{0.5\\times10^{6}\\;\\text{V/s}}{\\pi \\times 20\\times10^{3}\\;\\text{Hz}}\n               \\approx 8\\;\\text{V}_{pp}$$\n\nSo, on a 15 V supply the LM358 can deliver roughly **8 V peak‑to‑peak** (≈ 4 V peak) at 20 kHz under typical conditions. (With the minimum guaranteed SR of 0.3 V/µs the swing would be ≈ 4.8 Vpp.)",
+      "correct": true,
+      "tokens": 1485
+    },
+    "copilot": {
+      "answer": "**Answer:**  \nAt 20 kHz the LM358’s slew‑rate limits the sinusoidal output to approximately **±2.4 V** (peak‑to‑peak ≈ 4.8 V) on a 15 V supply.\n\n**Working**\n\n| Item | Value | Source |\n|------|-------|--------|\n| Slew rate (SR) | 0.3 V/µs (worst‑case/minimum) | LM358 electrical characteristics, “SR Slew rate G = +1” [lm358.pdf p.10] |\n| Frequency (f) | 20 kHz | Given in the question |\n| Maximum peak amplitude for a sine wave (Vₚₖ) | $\\displaystyle V_{pk}= \\frac{SR}{2\\pi f}$ | Derived from $\\frac{dV}{dt}_{max}=2\\pi f V_{pk}$ |\n| Calculation | $V_{pk}= \\frac{0.3\\text{ V/µs}}{2\\pi \\times 20\\text{ kHz}} = 2.387\\text{ V}$ | calculate tool → 2.387 V |\n| Peak‑to‑peak swing (Vₚₚ) | $2\\times V_{pk}= \\frac{SR}{\\pi f}=4.775\\text{ V}$ | calculate tool → 4.775 V |\n\nThus the largest undistorted sinusoidal swing the LM358 can produce at 20 kHz is about **±2.4 V** (≈ 4.8 V p‑p).\n\n**Caveats**\n\n- The slew‑rate value used is the minimum (worst‑case) guaranteed value; typical parts may achieve slightly more swing.\n- This limit assumes a pure sine wave and ignores other constraints such as output‑stage voltage headroom (the LM358 can typically swing to within a few hundred millivolts of the rails, so the 15 V supply does not further restrict the swing at this frequency).\n- Temperature variations can affect SR; the calculation uses the room‑temperature specification given in the datasheet.",
+      "correct": true,
+      "cites_expected_page": false,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "calculate",
+        "calculate"
+      ],
+      "tokens": 15163
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Plain's answer is 8 Vp-p (slew-rate estimate); the automatic score matched a side remark (4.8 Vp-p at the minimum slew rate). The copilot also worked it out from the slew rate (0.3 V/µs, p.10) instead of reading Figure 5-45, and got 4.8 Vp-p, which agrees with the graph's ≈ 4.5 Vp-p."
+    }
+  },
+  {
+    "id": "Q14",
+    "kind": "graph",
+    "question": "Using TI's LM358 datasheet, what is the LM358's typical source current limit at 125 °C?",
+    "expected": "≈ 22 mA (Figure 5-48, typical curve)",
+    "plain": {
+      "answer": "≈ 10 mA (typical source‑current limit at 125 °C)",
+      "correct": false,
+      "tokens": 1276
+    },
+    "copilot": {
+      "answer": "The LM358’s typical source‑current limit at 125 °C is **≈ 20 mA**.\n\n**Working**\n\n| Item | Value & Unit | Source |\n|------|--------------|--------|\n| Graph “Figure 5‑48. Source Current Limiting” reading at 125 °C | ≈ 20 mA (output current) | [lm358.pdf p.23] |\n\nNo further calculations were needed; the value is taken directly from the typical‑characteristics curve.\n\n**Caveats**\n\n- The figure shows a *typical* characteristic, not a guaranteed minimum or maximum limit.  \n- The reading is approximate (± a few mA) because it is extracted from a graph.  \n- The curve applies to the LM358 family (including LM358, LM358A, etc.) under the conditions indicated in the figure (source‑current limiting).  \n\nThus, for design purposes you should verify the actual limit against the worst‑case (minimum) specification if a guaranteed value is required.",
+      "correct": true,
+      "cites_expected_page": true,
+      "unsupported_citations": [],
+      "tools": [
+        "search_datasheets",
+        "read_graph"
+      ],
+      "tokens": 12438
+    },
+    "reviewed": {
+      "plain": false,
+      "copilot": true,
+      "note": "Copilot read Figure 5-48 with Nemotron 3.5 Super VL: ≈ 20 mA (the graph shows ≈ 22 mA). Plain said about 10 mA."
+    }
+  }
+]

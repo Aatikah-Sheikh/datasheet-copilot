@@ -32,12 +32,12 @@ def main() -> int:
         print(f"  {model_id}")
 
     ok = True
-    for label, model in (("reasoning", settings.reasoning_model), ("fast", settings.fast_model)):
+    for label, model in (("reasoning", settings.reasoning_model), ("fast", settings.fast_model), ("vision", settings.vision_model)):
         found = model in model_ids
         ok &= found
         print(f"{'OK' if found else 'MISSING'}: {label} model {model}")
     if not ok:
-        print("Set NEBIUS_REASONING_MODEL / NEBIUS_FAST_MODEL in .env to IDs from the list above.")
+        print("Set NEBIUS_REASONING_MODEL / NEBIUS_FAST_MODEL / NEBIUS_VISION_MODEL in .env to IDs from the list above.")
         return 1
 
     response = client.chat.completions.create(

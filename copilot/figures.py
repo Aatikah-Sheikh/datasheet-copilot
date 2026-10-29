@@ -66,7 +66,10 @@ def _encode(image, fmt: str, **options) -> bytes:
 
 
 def read_graph(client, model: str, data: bytes, doc: str, page: int, question: str) -> dict:
-    image = trim_margins(render_page(data, page))
+    try:
+        image = trim_margins(render_page(data, page))
+    except pdfium.PdfiumError as exc:
+        return {"error": f"Could not render {doc} p.{page}: {exc}"}
     png = base64.b64encode(_encode(image, "PNG")).decode()
     try:
         # Reasoning stays on here: with it off, the model misread a log frequency axis (10 V at

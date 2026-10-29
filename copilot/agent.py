@@ -17,7 +17,8 @@ CITATION = re.compile(r"\[([^\[\]\n]{3,160}?)\](?!\()")
 _CITATION_DOC = re.compile(r"(.+?)\s+pp?\.\s*\d")
 # A label before the document name, e.g. "read_graph: lm358.pdf p.23" or "Source: lm358.pdf p.4"
 _CITATION_LABEL = re.compile(r"^[A-Za-z_ ]{2,30}:\s*")
-_NUMBER = re.compile(r"\d{1,4}")
+_PAGES = re.compile(r"(\d{1,4})(?:\s*[-–]\s*(\d{1,4}))?")  # "4" or a range "4-7"
+MAX_RANGE = 20  # a longer "range" is more likely a typo than a citation
 
 
 def parse_citation(inner: str) -> tuple[str, list[int]] | None:
@@ -26,7 +27,11 @@ def parse_citation(inner: str) -> tuple[str, list[int]] | None:
     match = _CITATION_DOC.match(inner)
     if not match:
         return None
-    return match.group(1).strip(), [int(n) for n in _NUMBER.findall(inner[match.end(1):])]
+    pages = []
+    for first, last in _PAGES.findall(inner[match.end(1):]):
+        start, end = int(first), int(last or first)
+        pages.extend(range(start, end + 1) if 0 <= end - start <= MAX_RANGE else [start, end])
+    return match.group(1).strip(), pages
 
 
 def iter_citations(text: str):
@@ -41,7 +46,7 @@ SYSTEM_PROMPT = """You are Datasheet Copilot, a design assistant for electronics
 Rules:
 1. Ground every datasheet fact in a search_datasheets or read_graph result and cite it inline as [<document> p.<page>], e.g. [lm358.pdf p.23]: square brackets, the document name only (no tool name), including inside tables. If the loaded datasheets do not state a value, say so plainly. Never guess or recall a spec from memory.
 2. Do every numerical calculation with the calculate tool, passing inputs with units. Never do arithmetic yourself: any number you derive (a ratio, unit conversion, dB value or margin) must come from a calculate call in this turn. Quote the tool's result, and never say you used the calculator unless you called it.
-3. State assumptions (operating conditions, temperature, load). For design margins use worst-case (min/max) values rather than typical, and say which you used.
+3. State assumptions (operating conditions, temperature, load). For design margins use worst-case (min/max) values rather than typical, and say which you used. Datasheets often cover several part variants in separate tables: take each value from the table whose heading (shown as [Section: ...] on passages) names the exact part asked about, and say which variant it is for.
 4. If a datasheet you need is not loaded, find the manufacturer's PDF with web_search (if available) and load it with fetch_datasheet_pdf, then search it. Prefer manufacturer domains.
 5. Some values appear only in graphs (typical-characteristics curves). If read_graph is available, find the graph's page with search_datasheets (figure captions are in the page text), then call read_graph with that page and a question naming the figure, the x value and the condition. Give graph readings as approximate (≈), say they come from a typical curve rather than a guaranteed limit, and cite the page.
 6. Structure answers as: the answer first; then "Working" listing each value used with its citation, the calculation and the result; then caveats. Be concise.
@@ -62,7 +67,8 @@ FALSE_CALC_NOTE = (
     "Your answer says it used the calculator, but you made no calculate call in this turn. "
     "Call calculate now for every number you derived (ratios, conversions, dB values, margins) and quote its results."
 )
-_CALCULATOR_CLAIM = re.compile(r"calculate tool|calculator|\[calculate\]", re.IGNORECASE)
+# \W{0,4} allows Markdown between the words: the model wrote "Using the **calculate** tool" with no call.
+_CALCULATOR_CLAIM = re.compile(r"(?<!no )(?<!without )(?:calculate\W{0,4}tool|calculator|\[calculate\])", re.IGNORECASE)
 
 
 @dataclass

@@ -92,7 +92,7 @@ class MeteredClient:
 
     def check(self) -> None:
         if self.session["tokens"] >= self.limits.per_session:
-            raise BudgetExceeded("This session has used its token allowance. Clear the conversation and reload to start a new one.")
+            raise BudgetExceeded("This session has used its token allowance. Open the app in a new browser tab to start a new session.")
         self.store.check(self.limits)
 
     def _create(self, **kwargs):

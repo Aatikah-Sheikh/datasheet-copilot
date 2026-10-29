@@ -234,6 +234,7 @@ def test_graph_reading_counts_as_evidence_and_its_image_is_not_sent_to_the_model
     assert "read_graph" not in [t["function"]["name"] for t in ToolBox(library).schemas()]
     assert "error" in toolbox.call("read_graph", {"doc": "PDA05CF2.pdf", "page": 9, "question": "q"})
     assert "error" in toolbox.call("read_graph", {"doc": "OPA847.pdf", "page": 1, "question": "q"})  # no PDF bytes
+    assert "error" in toolbox.call("read_graph", {"doc": "PDA05CF2.pdf", "page": "two", "question": "q"})
 
     client = StubClient([
         (None, [_tool_call("1", "read_graph", {"doc": "PDA05CF2.pdf", "page": 2, "question": "swing at 10 mA"})]),
@@ -258,3 +259,24 @@ def test_trim_margins_crops_blank_space_and_a_lone_footer():
     draw.rectangle((100, 100, 900, 600), outline="black", width=3)  # the figures
     draw.line((100, 1250, 900, 1250), fill="black", width=2)  # footer, far below
     assert trim_margins(page, pad=0).size == (801, 501)
+
+
+def test_chunks_are_labelled_with_their_section_so_part_variants_stay_apart():
+    library = Library()
+    filler = "Row of table values. " * 90  # pushes the GBW row into a later chunk than the heading
+    library.add_pages("lm358.pdf", [
+        "Table of Contents\n5.7 Electrical Characteristics: LM358 ..... 10",
+        "5.7 Electrical Characteristics: LM358, LM358A\n" + filler + "GBW Gain bandwidth product 0.7 MHz",
+        "5.9 Electrical Characteristics: LM158, LM158A\n3.53 VRMS, VS = 36 V\nGBW Gain bandwidth product 0.7 MHz",
+    ])
+    by_page = {c.page: c.text for c in library.chunks if "GBW" in c.text}
+    assert by_page[2].startswith("[Section: 5.7 Electrical Characteristics: LM358, LM358A]")
+    assert by_page[3].startswith("5.9 Electrical")  # its own heading opens the chunk: no stale label
+    assert not any(c.text.startswith("[Section") for c in library.chunks if c.page == 1)
+
+
+def test_calculator_claims_are_caught_through_markdown_but_denials_are_not():
+    from copilot.agent import false_calculator_claim
+
+    assert false_calculator_claim("Using the **calculate** tool: 1.2 MHz / 20 = 60 kHz", [])
+    assert not false_calculator_claim("No calculator was needed.", [])

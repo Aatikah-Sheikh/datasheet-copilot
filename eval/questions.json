@@ -1,0 +1,213 @@
+{
+  "datasheets": {
+    "lm358.pdf": "https://www.ti.com/lit/ds/symlink/lm358.pdf",
+    "opa350.pdf": "https://www.ti.com/lit/ds/symlink/opa350.pdf"
+  },
+  "note": "Correct answers were read by hand from TI's LM358 datasheet (SLOS068AB, October 2024) and OPA350 datasheet (SBOS099D, December 2015). `pages` are the pages that state the value; `accept` lists regexes, any of which marks the answer correct, or a numeric range for values read off a graph.",
+  "questions": [
+    {
+      "id": "Q1",
+      "kind": "lookup",
+      "question": "According to TI's LM358 datasheet, what is the absolute maximum supply voltage of the LM358B?",
+      "expected": "40 V (±20 V)",
+      "doc": "lm358.pdf",
+      "pages": [
+        4
+      ],
+      "accept": [
+        "(?<![\\d.])40\\s*V",
+        "±\\s*20\\s*V"
+      ]
+    },
+    {
+      "id": "Q2",
+      "kind": "lookup",
+      "question": "According to TI's LM358 datasheet, what is the absolute maximum supply voltage of the original LM358 (not the B version)?",
+      "expected": "32 V (±16 V)",
+      "doc": "lm358.pdf",
+      "pages": [
+        4
+      ],
+      "accept": [
+        "(?<![\\d.])32\\s*V",
+        "±\\s*16\\s*V"
+      ]
+    },
+    {
+      "id": "Q3",
+      "kind": "lookup",
+      "question": "According to TI's LM358 datasheet, what is the maximum input offset voltage of the LM358A at 25 °C?",
+      "expected": "3 mV",
+      "doc": "lm358.pdf",
+      "pages": [
+        1,
+        10
+      ],
+      "accept": [
+        "(?<![\\d.])3(?:\\.0)?\\s*mV"
+      ]
+    },
+    {
+      "id": "Q4",
+      "kind": "lookup",
+      "question": "According to TI's LM358 datasheet, what is the gain-bandwidth product of the original LM358 (not the B version)?",
+      "expected": "0.7 MHz",
+      "doc": "lm358.pdf",
+      "pages": [
+        1,
+        10
+      ],
+      "accept": [
+        "0\\.7\\s*MHz",
+        "700\\s*kHz"
+      ]
+    },
+    {
+      "id": "Q5",
+      "kind": "lookup",
+      "question": "According to TI's LM358 datasheet, what is the slew rate of the LM358B?",
+      "expected": "0.5 V/µs",
+      "doc": "lm358.pdf",
+      "pages": [
+        6,
+        8,
+        26
+      ],
+      "accept": [
+        "0\\.5\\s*V\\s*/\\s*[µμu]s"
+      ]
+    },
+    {
+      "id": "Q6",
+      "kind": "calculation",
+      "question": "Using TI's LM358 datasheet, what closed-loop bandwidth can I expect from an LM358B in a non-inverting gain of 20?",
+      "expected": "60 kHz (1.2 MHz / 20)",
+      "doc": "lm358.pdf",
+      "pages": [
+        1,
+        6,
+        8,
+        26
+      ],
+      "accept": [
+        "(?<![\\d.])60(?:\\.0+)?\\s*kHz",
+        "0\\.06\\s*MHz"
+      ]
+    },
+    {
+      "id": "Q7",
+      "kind": "calculation",
+      "question": "Using TI's LM358 datasheet, how much margin does a 24 V supply rail leave below the absolute maximum supply voltage of the original LM358 (not the B version)?",
+      "expected": "8 V (32 V − 24 V)",
+      "doc": "lm358.pdf",
+      "pages": [
+        4
+      ],
+      "accept": [
+        "(?<![\\d.])8(?:\\.0+)?\\s*V(?![/\\w])"
+      ]
+    },
+    {
+      "id": "Q8",
+      "kind": "calculation",
+      "question": "Using TI's LM358 datasheet, what worst-case output error does the LM358's maximum input offset voltage over 0 °C to 70 °C cause at a gain of 100?",
+      "expected": "0.9 V (9 mV × 100)",
+      "doc": "lm358.pdf",
+      "pages": [
+        10
+      ],
+      "accept": [
+        "(?<![\\d.])0\\.9(?:0+)?\\s*V",
+        "(?<![\\d.])900\\s*mV"
+      ]
+    },
+    {
+      "id": "Q9",
+      "kind": "lookup",
+      "question": "According to TI's OPA350 datasheet, what is the OPA350's gain-bandwidth product?",
+      "expected": "38 MHz",
+      "doc": "opa350.pdf",
+      "pages": [
+        1,
+        6
+      ],
+      "accept": [
+        "(?<![\\d.])38\\s*MHz"
+      ]
+    },
+    {
+      "id": "Q10",
+      "kind": "lookup",
+      "question": "According to TI's OPA350 datasheet, what is the OPA350's absolute maximum supply voltage?",
+      "expected": "7 V",
+      "doc": "opa350.pdf",
+      "pages": [
+        4
+      ],
+      "accept": [
+        "(?<![\\d.])7(?:\\.0)?\\s*V(?![/\\w])"
+      ]
+    },
+    {
+      "id": "Q11",
+      "kind": "lookup",
+      "question": "According to TI's OPA350 datasheet, what is the OPA350's input voltage noise density at 10 kHz?",
+      "expected": "7 nV/√Hz",
+      "doc": "opa350.pdf",
+      "pages": [
+        6
+      ],
+      "accept": [
+        "(?<![\\d.])7(?:\\.0)?\\s*nV"
+      ]
+    },
+    {
+      "id": "Q12",
+      "kind": "calculation",
+      "question": "Using TI's OPA350 and LM358 datasheets, how many times faster is the OPA350's slew rate than the LM358B's?",
+      "expected": "44 times (22 V/µs ÷ 0.5 V/µs)",
+      "doc": "opa350.pdf",
+      "pages": [
+        1,
+        6,
+        12
+      ],
+      "accept": [
+        "(?<![\\d.])44(?:\\.0+)?\\s*(?:times|×|x\\b|-fold|fold)",
+        "(?:factor|ratio)\\s+of\\s+(?:about\\s+|≈\\s*)?44(?![\\d.])",
+        "≈\\s*44(?![\\d.])",
+        "=\\s*44(?![\\d.])"
+      ]
+    },
+    {
+      "id": "Q13",
+      "kind": "graph",
+      "question": "Using TI's LM358 datasheet, on a 15 V supply, what is the largest output swing the LM358 can deliver at 20 kHz?",
+      "expected": "≈ 4.5 Vp-p (Figure 5-45, typical curve)",
+      "doc": "lm358.pdf",
+      "pages": [
+        23
+      ],
+      "range": {
+        "low": 3.5,
+        "high": 5.5,
+        "unit": "V"
+      }
+    },
+    {
+      "id": "Q14",
+      "kind": "graph",
+      "question": "Using TI's LM358 datasheet, what is the LM358's typical source current limit at 125 °C?",
+      "expected": "≈ 22 mA (Figure 5-48, typical curve)",
+      "doc": "lm358.pdf",
+      "pages": [
+        23
+      ],
+      "range": {
+        "low": 18,
+        "high": 26,
+        "unit": "mA"
+      }
+    }
+  ]
+}

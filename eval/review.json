@@ -1,0 +1,13 @@
+{
+  "Q1": {"note": "Plain gave 32 V, the rating of the original LM358, not the B version."},
+  "Q3": {"note": "Plain gave 2 mV, the typical value. Copilot's value is right, but it labelled the 2 mV typical as the minimum."},
+  "Q4": {"note": "Plain said about 1 MHz."},
+  "Q6": {"plain": false, "note": "First run: right value, but the copilot wrote that it used the calculate tool without calling it, and the check missed \"**calculate** tool\" because of the Markdown. Fixed in copilot/agent.py; on the rerun shown it calls calculate. Plain used about 1 MHz and answered about 50 kHz (the automatic score matched a side remark, \"35–60 kHz\")."},
+  "Q7": {"note": "Both right."},
+  "Q8": {"note": "Plain used 7 mV, the 25 °C maximum, instead of 9 mV over 0 °C to 70 °C."},
+  "Q9": {"note": "Plain said 10 MHz."},
+  "Q11": {"note": "Plain said 8 nV/√Hz."},
+  "Q12": {"note": "Plain used 20 V/µs and 0.3 V/µs and got about 67 times."},
+  "Q13": {"plain": false, "note": "Plain's answer is 8 Vp-p (slew-rate estimate); the automatic score matched a side remark (4.8 Vp-p at the minimum slew rate). The copilot also worked it out from the slew rate (0.3 V/µs, p.10) instead of reading Figure 5-45, and got 4.8 Vp-p, which agrees with the graph's ≈ 4.5 Vp-p."},
+  "Q14": {"note": "Copilot read Figure 5-48 with Nemotron 3.5 Super VL: ≈ 20 mA (the graph shows ≈ 22 mA). Plain said about 10 mA."}
+}

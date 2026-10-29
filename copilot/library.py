@@ -11,6 +11,11 @@ from pypdf import PdfReader
 CHUNK_CHARS = 1500
 CHUNK_OVERLAP = 250
 _TOKEN = re.compile(r"[a-z0-9]+(?:[.\-][a-z0-9]+)*")
+# A numbered section heading on its own line, e.g. "5.9 Electrical Characteristics: LM158, LM158A".
+# Contents-page entries (dot leaders and a page number) and wrapped lines ending in a comma are
+# excluded, and a lowercase word is required, which rules out table rows such as "3.53 VRMS, VS = 36 V".
+_HEADING = re.compile(r"^([1-9]\d?(?:\.\d{1,2})+ +[A-Z](?=[^\n]*[a-z]{4})[^\n]{3,100}?)(?<![.,\d ])\s*$", re.MULTILINE)
+SECTION_LEAD_CHARS = 300  # a chunk whose own heading starts this early is not labelled with the previous one
 
 
 def tokenize(text: str) -> list[str]:
@@ -77,7 +82,7 @@ class Library:
         self.page_counts[name] = len(pages)
         if data is not None:
             self.files[name] = data
-        with_text = 0
+        with_text, section = 0, ""
         for number, text in enumerate(pages, start=1):
             text = re.sub(r"[ \t]+", " ", text).strip()
             if not text:
@@ -85,7 +90,15 @@ class Library:
             with_text += 1
             start = 0
             while True:
-                self.chunks.append(Chunk(name, number, text[start : start + CHUNK_CHARS]))
+                body = text[start : start + CHUNK_CHARS]
+                # Label each chunk with the section it sits in (the heading may be on an earlier page or
+                # earlier in this one), so a table row is not mistaken for another part variant's.
+                headings = list(_HEADING.finditer(body))
+                opens_section = bool(headings) and headings[0].start() < SECTION_LEAD_CHARS
+                label = f"[Section: {section}]\n" if section and not opens_section else ""
+                self.chunks.append(Chunk(name, number, label + body))
+                if headings and "....." not in body:  # contents pages list headings out of context
+                    section = headings[-1].group(1).removesuffix(" (continued)").strip()
                 if start + CHUNK_CHARS >= len(text):
                     break
                 start += CHUNK_CHARS - CHUNK_OVERLAP

@@ -165,7 +165,7 @@ class ToolBox:
             return handler(**arguments)
         except TypeError as exc:
             return {"error": f"Bad arguments for {name}: {exc}"}
-        except (CalcError, FetchError) as exc:
+        except (CalcError, FetchError, ValueError) as exc:  # ValueError: e.g. a page number that is not a number
             return {"error": str(exc)}
 
     def _tool_search_datasheets(self, query: str, doc: str | None = None, k: int = 4) -> dict:
@@ -211,7 +211,10 @@ class ToolBox:
 
     def _tool_fetch_datasheet_pdf(self, url: str) -> dict:
         name, data = download_pdf(url)
-        pages_with_text = self.library.add_pdf(name, data)
+        try:
+            pages_with_text = self.library.add_pdf(name, data)
+        except Exception:  # pypdf raises many types for damaged files
+            return {"error": f"{name} could not be read. It may be damaged or encrypted."}
         if pages_with_text == 0:
             self.library.remove(name)
             return {"error": "The PDF has no extractable text (probably scanned)."}
