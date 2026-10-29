@@ -13,6 +13,10 @@ Copy values exactly as printed, including units and min/typ/max labels. Use the 
 If something is not on these pages, use null or leave it out. Never infer or estimate a value."""
 
 MAX_INPUT_CHARS = 12000
+MAX_SPECS = 8
+# Extraction needs no chain of thought. With reasoning on, Nemotron Nano can spend its whole
+# output budget thinking and return empty content (seen on the AD8421 datasheet).
+NO_THINKING = {"chat_template_kwargs": {"enable_thinking": False}}
 
 
 def extract_spec_card(client, model: str, library: Library, doc: str) -> dict | None:
@@ -24,9 +28,11 @@ def extract_spec_card(client, model: str, library: Library, doc: str) -> dict | 
         model=model,
         messages=[{"role": "system", "content": PROMPT}, {"role": "user", "content": text}],
         temperature=0,
-        max_tokens=3000,
+        max_tokens=1500,
+        extra_body=NO_THINKING,
     )
     card = parse_json_object(clean(response.choices[0].message.content))
-    if card is not None and not isinstance(card.get("key_specs"), list):
-        card["key_specs"] = []
+    if card is not None:
+        specs = card.get("key_specs")
+        card["key_specs"] = specs[:MAX_SPECS] if isinstance(specs, list) else []
     return card
