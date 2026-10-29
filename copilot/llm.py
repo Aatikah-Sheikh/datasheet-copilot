@@ -8,6 +8,12 @@ from openai import OpenAI
 from .config import Settings
 
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
+_BRACKETED = re.compile(r"(\[[^\[\]\n]*\])")
+# "lm358.pdf p.4" or "lm2596-d.pdf p.1 & p.4" written without brackets (models do this in tables)
+_BARE_CITATION = re.compile(
+    r"(?<![\w./-])[\w.-]+\.pdf\s+pp?\.\s*\d{1,4}(?:\s*(?:,|&|and|-|–)\s*(?:pp?\.\s*)?\d{1,4})*",
+    re.IGNORECASE,
+)
 
 
 def make_client(settings: Settings) -> OpenAI:
@@ -16,13 +22,22 @@ def make_client(settings: Settings) -> OpenAI:
     return OpenAI(base_url=settings.base_url, api_key=settings.api_key)
 
 
+def _bracket_bare_citations(text: str) -> str:
+    """Wrap unbracketed 'doc.pdf p.N' references in [ ] so they are chipped and checked like the rest."""
+    parts = _BRACKETED.split(text)  # odd indices are existing [...] segments, left untouched
+    for i in range(0, len(parts), 2):
+        parts[i] = _BARE_CITATION.sub(lambda m: f"[{m.group(0)}]", parts[i])
+    return "".join(parts)
+
+
 def clean(text: str | None) -> str:
-    """Strip any inline reasoning block, normalise citation brackets to [ ], and convert
-    LaTeX \\( \\) and \\[ \\] delimiters to the $ / $$ form Streamlit renders."""
+    """Strip any inline reasoning block, normalise citation brackets to [ ], convert LaTeX
+    \\( \\) and \\[ \\] delimiters to the $ / $$ form Streamlit renders, and bracket bare citations."""
     text = _THINK.sub("", text or "").strip()
     text = text.replace("【", "[").replace("】", "]")
     text = re.sub(r"\\\[(.+?)\\\]", lambda m: f"$${m.group(1).strip()}$$", text, flags=re.DOTALL)
-    return re.sub(r"\\\((.+?)\\\)", lambda m: f"${m.group(1).strip()}$", text, flags=re.DOTALL)
+    text = re.sub(r"\\\((.+?)\\\)", lambda m: f"${m.group(1).strip()}$", text, flags=re.DOTALL)
+    return _bracket_bare_citations(text)
 
 
 def parse_json_object(text: str) -> dict | None:

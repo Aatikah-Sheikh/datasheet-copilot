@@ -15,6 +15,7 @@ st.set_page_config(page_title="Datasheet Copilot · preview", page_icon=":materi
 from copilot import ui  # noqa: E402
 from copilot.agent import Step  # noqa: E402
 from copilot.calculator import calculate  # noqa: E402
+from copilot.llm import clean  # noqa: E402
 from copilot.usage import Limits  # noqa: E402
 
 LIMITS = Limits(100_000, 300_000, 1_000_000)
@@ -40,9 +41,15 @@ ANSWER = """The absolute maximum supply voltage for the LM358 is **32 V** (or ±
 | Rail voltage | 24 V | Given |
 | Margin $(32 - 24)/32$ | 25 % | [calculate] |
 
+| Parameter | Absolute-maximum rating | Source (page) |
+|---|---|---|
+| Supply voltage | LM358B/LM358BA/LM2904B/LM2904BA: ±20 V or 40 V; LM158/LM258/LM358/LM158A/LM258A/LM358A/LM2904V: ±16 V or 32 V | lm358.pdf p.4 |
+| Differential input | LM358B/LM358BA/LM2904B/LM2904BA/LM158/LM258/LM358/LM158A/LM258A/LM358A/LM2904V: –32 V to +32 V | lm358.pdf p.4 |
+
 **Caveats**
 - The 32 V limit applies to the total supply $(V_+ - V_-)$; split rails must not exceed ±16 V.
 - Absolute maximum is a damage threshold, not an operating point. Stay within the recommended operating conditions [lm358.pdf p.5]."""
+ANSWER = clean(ANSWER)  # as the agent does, so bare "doc.pdf p.N" references become citations
 P4 = ("5 Specifications 5.1 Absolute Maximum Ratings over operating ambient temperature range (unless otherwise noted) "
       "MIN MAX UNIT Supply voltage, VS = ([V+] – [V–]) LM358, LM358A, LM258, LM258A, LM158, LM158A ±16 or 32 V "
       "LM2904, LM2904V ±13 or 26 V Differential input voltage, VID –32 32 V Input voltage, VI Either input –0.3 32 V")

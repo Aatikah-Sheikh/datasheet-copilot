@@ -67,8 +67,12 @@ CSS = """
 .dc-howto .d { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
 @media (max-width: 900px) { .dc-steps { grid-template-columns: 1fr; } }
 
-/* Chat */
+/* Chat. Columns must be allowed to shrink below their content (flex min-width: auto
+   otherwise lets a wide table push the conversation under the evidence panel). */
+[data-testid="stColumn"], [data-testid="stChatMessageContent"] { min-width: 0; }
 [data-testid="stChatMessage"] { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.9rem 1rem; }
+[data-testid="stChatMessageContent"] table { display: block; max-width: 100%; overflow-x: auto; }
+[data-testid="stChatMessageContent"] td, [data-testid="stChatMessageContent"] th { overflow-wrap: anywhere; min-width: 6rem; }
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { background: var(--user); }
 .dc-trace-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
 

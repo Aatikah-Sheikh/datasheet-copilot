@@ -140,6 +140,15 @@ def test_clean_converts_latex_and_citation_brackets():
     assert clean(text) == "Margin $\\frac{8}{32}$ is 25% [lm358.pdf p.4]\n$$f = \\frac{GBW}{G}$$"
 
 
+def test_clean_brackets_bare_citations_but_not_existing_ones():
+    from copilot.llm import clean
+
+    text = "| Supply | 32 V | lm358.pdf p.4 |\nGain [lm358.pdf p.10]; LDO lm2596-d.pdf p.1 & p.4."
+    assert clean(text) == (
+        "| Supply | 32 V | [lm358.pdf p.4] |\nGain [lm358.pdf p.10]; LDO [lm2596-d.pdf p.1 & p.4]."
+    )
+
+
 def test_toolbox_reports_bad_input_as_error():
     toolbox = ToolBox(_library())
     assert "error" in toolbox.call("calculate", {"expression": "V + I", "variables": {"V": "1 V", "I": "1 A"}})
