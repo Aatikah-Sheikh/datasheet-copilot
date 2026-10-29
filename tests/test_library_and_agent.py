@@ -1,7 +1,9 @@
 import json
 from types import SimpleNamespace
 
-from copilot.agent import run_agent
+import pytest
+
+from copilot.agent import Step, parse_citation, run_agent, unsupported_citations
 from copilot.library import CHUNK_CHARS, Library
 from copilot.tools import ToolBox
 
@@ -82,6 +84,53 @@ def test_agent_stops_after_max_steps():
     assert result.answer == "Best effort answer."
     assert len(result.steps) == 3
     assert "tools" not in client.requests[-1]
+
+
+def test_first_call_requires_a_tool_when_datasheets_are_loaded():
+    client = StubClient([
+        (None, [_tool_call("1", "search_datasheets", {"query": "bandwidth"})]),
+        ("Bandwidth is 150 MHz [PDA05CF2.pdf p.2].", None),
+    ])
+    run_agent(client, "test-model", ToolBox(_library()), "Bandwidth?")
+    assert client.requests[0]["tool_choice"] == "required"
+    assert client.requests[1]["tool_choice"] == "auto"
+
+
+def test_answer_with_unretrieved_citations_is_sent_back_once():
+    client = StubClient([
+        (None, [_tool_call("1", "search_datasheets", {"query": "bandwidth", "doc": "PDA05CF2.pdf"})]),
+        # Cites OPA847 p.1, which no search in this turn returned (answering from memory).
+        ("PDA05CF2 is 150 MHz [PDA05CF2.pdf p.2]; OPA847 GBW is 3.9 GHz [OPA847.pdf p.1].", None),
+        (None, [_tool_call("2", "search_datasheets", {"query": "gain bandwidth", "doc": "OPA847.pdf"})]),
+        ("PDA05CF2 is 150 MHz [PDA05CF2.pdf p.2]; OPA847 GBW is 3.9 GHz [OPA847.pdf p.1].", None),
+    ])
+    result = run_agent(client, "test-model", ToolBox(_library()), "Compare bandwidths")
+
+    nudges = [m for m in client.requests[2]["messages"] if m["role"] == "user" and "did not retrieve" in m["content"]]
+    assert len(nudges) == 1 and "OPA847.pdf p.1" in nudges[0]["content"]
+    assert [s.tool for s in result.steps] == ["search_datasheets", "search_datasheets"]
+    assert unsupported_citations(result.answer, result.steps) == []
+
+
+@pytest.mark.parametrize(
+    "inner, expected",
+    [
+        ("lm358.pdf p.4", ("lm358.pdf", [4])),
+        ("lm2596-d.pdf p.1 & p.4", ("lm2596-d.pdf", [1, 4])),
+        ("LM2596.PDF p.2, p.10", ("LM2596.PDF", [2, 10])),
+        ("lm358.pdf pp. 4-5", ("lm358.pdf", [4, 5])),
+        ("calculate", None),
+        ("see note", None),
+    ],
+)
+def test_parse_citation(inner, expected):
+    assert parse_citation(inner) == expected
+
+
+def test_multi_page_citation_checks_each_page_and_ignores_links():
+    steps = [Step("search_datasheets", {"query": "x"}, {"results": [{"doc": "a.pdf", "page": 1, "text": ""}]})]
+    answer = "Value [a.pdf p.1 & p.4]. See [the docs](https://example.com)."
+    assert unsupported_citations(answer, steps) == [("a.pdf", 4)]
 
 
 def test_clean_converts_latex_and_citation_brackets():

@@ -46,7 +46,7 @@ EXAMPLES = [
 
 settings = Settings.load()
 LIMITS = Limits(settings.max_tokens_per_session, settings.max_tokens_per_day, settings.max_tokens_total)
-MAX_AGENT_STEPS = 6
+MAX_AGENT_STEPS = 8  # room for a comparison across two datasheets plus one citation recheck
 
 
 @st.cache_resource

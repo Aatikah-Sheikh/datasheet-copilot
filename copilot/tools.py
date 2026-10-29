@@ -6,7 +6,7 @@ from .calculator import CalcError, calculate
 from .fetch import FetchError, download_pdf
 from .library import Library
 
-SNIPPET_CHARS = 1200
+SNIPPET_CHARS = 800  # every step re-sends earlier results, so passages are the main token cost
 
 _SEARCH = {
     "type": "function",
@@ -22,7 +22,7 @@ _SEARCH = {
             "properties": {
                 "query": {"type": "string", "description": "Keywords to search for."},
                 "doc": {"type": "string", "description": "Optional: restrict to one document name."},
-                "k": {"type": "integer", "description": "Number of passages (default 5, max 8)."},
+                "k": {"type": "integer", "description": "Number of passages (default 4, max 6)."},
             },
             "required": ["query"],
         },
@@ -123,12 +123,12 @@ class ToolBox:
         except (CalcError, FetchError) as exc:
             return {"error": str(exc)}
 
-    def _tool_search_datasheets(self, query: str, doc: str | None = None, k: int = 5) -> dict:
+    def _tool_search_datasheets(self, query: str, doc: str | None = None, k: int = 4) -> dict:
         if not self.library.docs():
             return {"error": "No datasheets are loaded yet."}
         if doc and doc not in self.library.docs():
             return {"error": f"No document named '{doc}'. Loaded: {self.library.docs()}"}
-        hits = self.library.search(query, k=max(1, min(int(k), 8)), doc=doc)
+        hits = self.library.search(query, k=max(1, min(int(k), 6)), doc=doc)
         if not hits:
             return {"results": [], "note": "No matching passages. Try different keywords."}
         return {"results": [{"doc": h.doc, "page": h.page, "text": h.text[:SNIPPET_CHARS]} for h in hits]}

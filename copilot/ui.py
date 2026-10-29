@@ -15,7 +15,7 @@ import re
 
 import streamlit as st
 
-from .agent import Step
+from .agent import CITATION, Step, iter_citations, parse_citation
 
 CSS = """
 <style>
@@ -143,7 +143,6 @@ HOW_IT_WORKS = [
     ("03", "Check the evidence", "Each answer lists the exact passages it relied on and every calculation it ran."),
 ]
 
-CITATION = re.compile(r"\[([^\[\]\n]{1,120}?)\s+p\.\s*(\d{1,4})\]")
 _CALC_CITATION = re.compile(r"\[(?:calculate|calculator)(?: (?:tool|output|result))?\]", re.IGNORECASE)
 _WORD = re.compile(r"[a-z0-9]{3,}")
 
@@ -190,7 +189,11 @@ def format_answer(text: str) -> str:
     """Turn [doc p.N] and [calculate] citations into styled chips (rendered with unsafe_allow_html)."""
 
     def chip(match: re.Match) -> str:
-        return f'<span class="dc-cite">{html.escape(match.group(1).strip())} · p.{match.group(2)}</span>'
+        parsed = parse_citation(match.group(1))
+        if not parsed:
+            return match.group(0)  # an ordinary bracket, left as written
+        doc, pages = parsed
+        return "".join(f'<span class="dc-cite">{html.escape(doc)} · p.{page}</span>' for page in pages)
 
     return _CALC_CITATION.sub('<span class="dc-cite calc">calculator</span>', CITATION.sub(chip, text))
 
@@ -225,11 +228,12 @@ def _cited_passages(answer: str, steps: list[Step]) -> list[tuple[str, int, str 
             for hit in step.result.get("results", []):
                 retrieved.setdefault((hit["doc"], int(hit["page"])), _snippet(hit["text"], query))
     seen, passages = set(), []
-    for match in CITATION.finditer(answer):
-        key = (match.group(1).strip(), int(match.group(2)))
-        if key not in seen:
-            seen.add(key)
-            passages.append((*key, retrieved.get(key)))
+    for _, doc, pages in iter_citations(answer):
+        for page in pages:
+            key = (doc, page)
+            if key not in seen:
+                seen.add(key)
+                passages.append((*key, retrieved.get(key)))
     return passages
 
 
