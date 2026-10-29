@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from openai import BadRequestError
 
-from .llm import clean
+from .llm import NO_THINKING, clean
 from .tools import ToolBox
 
 MAX_TOOL_RESULT_CHARS = 12000
@@ -37,7 +37,7 @@ SYSTEM_PROMPT = """You are Datasheet Copilot, a design assistant for electronics
 
 Rules:
 1. Ground every datasheet fact in a search_datasheets result and cite it inline as [<document> p.<page>], with the square brackets, including inside tables. If the loaded datasheets do not state a value, say so plainly. Never guess or recall a spec from memory.
-2. Do every numerical calculation with the calculate tool, passing inputs with units. Never do arithmetic yourself. Quote the tool's result.
+2. Do every numerical calculation with the calculate tool, passing inputs with units. Never do arithmetic yourself: any number you derive (a ratio, unit conversion, dB value or margin) must come from a calculate call in this turn. Quote the tool's result, and never say you used the calculator unless you called it.
 3. State assumptions (operating conditions, temperature, load). For design margins use worst-case (min/max) values rather than typical, and say which you used.
 4. If a datasheet you need is not loaded, find the manufacturer's PDF with web_search (if available) and load it with fetch_datasheet_pdf, then search it. Prefer manufacturer domains.
 5. Structure answers as: the answer first; then "Working" listing each value used with its citation, the calculation and the result; then caveats. Be concise.
@@ -49,11 +49,16 @@ FINAL_NUDGE = (
     "Stop calling tools. Give your best answer now from the results above. Cite every value as "
     "[document p.N] using only pages those results returned, and say clearly which parts are unverified."
 )
-VERIFY_NUDGE = (
+MISSING_PAGES_NOTE = (
     "Your answer cites pages you did not retrieve in this turn: {pages}. Earlier turns are not evidence. "
-    "Use search_datasheets now to check each of those values, then give the corrected final answer, "
-    "citing only passages you retrieved in this turn. Remove any value you cannot find."
+    "Use search_datasheets now to check each of those values, citing only passages you retrieved in this "
+    "turn. Remove any value you cannot find."
 )
+FALSE_CALC_NOTE = (
+    "Your answer says it used the calculator, but you made no calculate call in this turn. "
+    "Call calculate now for every number you derived (ratios, conversions, dB values, margins) and quote its results."
+)
+_CALCULATOR_CLAIM = re.compile(r"calculate tool|calculator|\[calculate\]", re.IGNORECASE)
 
 
 @dataclass
@@ -94,6 +99,12 @@ def unsupported_citations(answer: str, steps: list[Step]) -> list[tuple[str, int
             if key not in retrieved and key not in missing:
                 missing.append(key)
     return missing
+
+
+def false_calculator_claim(answer: str, steps: list[Step]) -> bool:
+    """True if the answer credits the calculator but no calculate call succeeded this turn."""
+    calculated = any(s.tool == "calculate" and "error" not in s.result for s in steps)
+    return bool(_CALCULATOR_CLAIM.search(answer)) and not calculated
 
 
 def _create(client, tool_choice: str, **kwargs):
@@ -145,12 +156,20 @@ def run_agent(
         message = response.choices[0].message
         if not message.tool_calls:
             answer = clean(message.content)
+            if not answer:
+                break  # empty reply (reasoning used up the budget): go to the forced answer below
+            # One recheck if the answer claims evidence it does not have: pages it never
+            # retrieved this turn, or calculator results it never computed.
+            notes = []
             missing = unsupported_citations(answer, steps)
-            if missing and not rechecked and index + 1 < max_steps:
+            if missing:
+                notes.append(MISSING_PAGES_NOTE.format(pages=", ".join(f"{d} p.{p}" for d, p in missing)))
+            if false_calculator_claim(answer, steps):
+                notes.append(FALSE_CALC_NOTE)
+            if notes and not rechecked and index + 1 < max_steps:
                 rechecked = True
-                pages = ", ".join(f"{doc} p.{page}" for doc, page in missing)
                 messages.append({"role": "assistant", "content": message.content or ""})
-                messages.append({"role": "user", "content": VERIFY_NUDGE.format(pages=pages)})
+                messages.append({"role": "user", "content": " ".join(notes) + " Then give the corrected final answer."})
                 continue
             return AgentResult(answer, steps)
         messages.append(
@@ -180,10 +199,13 @@ def run_agent(
                     "content": json.dumps(result)[:MAX_TOOL_RESULT_CHARS],
                 }
             )
+    # Reasoning off for the forced answer: with it on, Nemotron can spend the whole output
+    # budget thinking and return empty content (seen after a long Tavily lookup).
     response = client.chat.completions.create(
         model=model,
         messages=[*messages, {"role": "user", "content": FINAL_NUDGE}],
         temperature=0.2,
         max_tokens=4096,
+        extra_body=NO_THINKING,
     )
     return AgentResult(clean(response.choices[0].message.content), steps)

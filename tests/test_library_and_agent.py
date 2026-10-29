@@ -32,6 +32,12 @@ def test_search_can_filter_by_document():
     assert hits and all(h.doc == "OPA847.pdf" for h in hits)
 
 
+def test_hyphenated_words_match_their_parts():
+    library = Library()
+    library.add_pages("opa350.pdf", ["Features. Unity-Gain Bandwidth: 38 MHz. Rail-to-rail output."])
+    assert library.search("unity gain bandwidth")[0].doc == "opa350.pdf"
+
+
 def test_long_page_is_fully_chunked():
     library = Library()
     text = "x " * 1000 + "uniqueterm"
@@ -106,10 +112,24 @@ def test_answer_with_unretrieved_citations_is_sent_back_once():
     ])
     result = run_agent(client, "test-model", ToolBox(_library()), "Compare bandwidths")
 
-    nudges = [m for m in client.requests[2]["messages"] if m["role"] == "user" and "did not retrieve" in m["content"]]
+    nudges = [m for m in client.requests[2]["messages"] if m["role"] == "user" and "did not retrieve in this turn" in m["content"]]
     assert len(nudges) == 1 and "OPA847.pdf p.1" in nudges[0]["content"]
     assert [s.tool for s in result.steps] == ["search_datasheets", "search_datasheets"]
     assert unsupported_citations(result.answer, result.steps) == []
+
+
+def test_false_calculator_claim_is_sent_back():
+    client = StubClient([
+        (None, [_tool_call("1", "search_datasheets", {"query": "bandwidth", "doc": "PDA05CF2.pdf"})]),
+        ("Ratio is 2 (using the calculate tool) [PDA05CF2.pdf p.2].", None),
+        (None, [_tool_call("2", "calculate", {"expression": "300 MHz / (150 MHz)"})]),
+        ("Ratio is 2 [calculate] [PDA05CF2.pdf p.2].", None),
+    ])
+    result = run_agent(client, "test-model", ToolBox(_library()), "Ratio?")
+
+    rechecks = [m for m in client.requests[2]["messages"] if m["role"] == "user" and "no calculate call" in m["content"]]
+    assert len(rechecks) == 1
+    assert [s.tool for s in result.steps] == ["search_datasheets", "calculate"]
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,8 @@ from openai import OpenAI
 from .config import Settings
 
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
+# Turns off Nemotron's hidden reasoning for a call (Token Factory passes this to the chat template).
+NO_THINKING = {"chat_template_kwargs": {"enable_thinking": False}}
 _BRACKETED = re.compile(r"(\[[^\[\]\n]*\])")
 # "lm358.pdf p.4" or "lm2596-d.pdf p.1 & p.4" written without brackets (models do this in tables)
 _BARE_CITATION = re.compile(

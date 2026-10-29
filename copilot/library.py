@@ -14,7 +14,10 @@ _TOKEN = re.compile(r"[a-z0-9]+(?:[.\-][a-z0-9]+)*")
 
 
 def tokenize(text: str) -> list[str]:
-    return _TOKEN.findall(text.lower())
+    """Words, keeping part numbers and decimals whole. Hyphenated words are indexed both whole
+    and as their parts, so "unity gain" matches a datasheet's "Unity-Gain"."""
+    tokens = _TOKEN.findall(text.lower())
+    return tokens + [part for token in tokens if "-" in token for part in token.split("-") if part]
 
 
 class BM25:

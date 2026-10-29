@@ -7,6 +7,12 @@ from .fetch import FetchError, download_pdf
 from .library import Library
 
 SNIPPET_CHARS = 800  # every step re-sends earlier results, so passages are the main token cost
+# Tavily searches these first: an open web search for "<part> datasheet" mostly returns
+# finance and jobs pages. Falls back to the open web if nothing comes back.
+DATASHEET_DOMAINS = [
+    "ti.com", "analog.com", "st.com", "onsemi.com", "microchip.com", "nxp.com", "infineon.com",
+    "renesas.com", "rohm.com", "diodes.com", "vishay.com", "thorlabs.com", "mouser.com", "digikey.com",
+]
 
 _SEARCH = {
     "type": "function",
@@ -71,7 +77,8 @@ _WEB_SEARCH = {
         "name": "web_search",
         "description": (
             "Search the web (Tavily) to find a manufacturer datasheet PDF URL or candidate "
-            "alternative parts. Results are leads, not facts: load the datasheet and cite it."
+            "alternative parts. Searches manufacturer and distributor sites first. Results are leads, "
+            "not facts: load the datasheet PDF with fetch_datasheet_pdf and cite it."
         ),
         "parameters": {
             "type": "object",
@@ -142,14 +149,17 @@ class ToolBox:
     def _tool_web_search(self, query: str) -> dict:
         from tavily import TavilyClient
 
+        client = TavilyClient(api_key=self.tavily_api_key)
         try:
-            response = TavilyClient(api_key=self.tavily_api_key).search(query, max_results=5)
+            results = client.search(query, max_results=6, include_domains=DATASHEET_DOMAINS).get("results", [])
+            if not results:
+                results = client.search(query, max_results=6).get("results", [])
         except Exception as exc:  # network, quota and auth errors all surface to the agent
             return {"error": f"Web search failed: {exc}"}
         return {
             "results": [
-                {"title": r.get("title"), "url": r.get("url"), "snippet": (r.get("content") or "")[:400]}
-                for r in response.get("results", [])
+                {"title": r.get("title"), "url": r.get("url"), "snippet": (r.get("content") or "")[:300]}
+                for r in results[:5]
             ]
         }
 

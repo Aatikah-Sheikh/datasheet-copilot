@@ -1,7 +1,7 @@
 """Spec cards: a fast Nemotron Nano call that summarises a datasheet's headline specs on upload."""
 
 from .library import Library
-from .llm import clean, parse_json_object
+from .llm import NO_THINKING, clean, parse_json_object
 
 PROMPT = """You extract a spec card from the first pages of an electronic component datasheet.
 Return only a JSON object with these keys:
@@ -14,9 +14,8 @@ If something is not on these pages, use null or leave it out. Never infer or est
 
 MAX_INPUT_CHARS = 12000
 MAX_SPECS = 8
-# Extraction needs no chain of thought. With reasoning on, Nemotron Nano can spend its whole
-# output budget thinking and return empty content (seen on the AD8421 datasheet).
-NO_THINKING = {"chat_template_kwargs": {"enable_thinking": False}}
+# Extraction needs no chain of thought (NO_THINKING): with reasoning on, Nemotron Nano can spend
+# its whole output budget thinking and return empty content (seen on the AD8421 datasheet).
 
 
 def extract_spec_card(client, model: str, library: Library, doc: str) -> dict | None:

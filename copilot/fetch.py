@@ -1,8 +1,9 @@
 """Download a datasheet PDF from a public URL, refusing private network addresses."""
 
 import ipaddress
+import re
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -29,8 +30,24 @@ def _check_public(url: str) -> str:
     return parsed.hostname
 
 
-def download_pdf(url: str, redirects_left: int = 5) -> tuple[str, bytes]:
-    """Return (suggested file name, PDF bytes). Each redirect hop is re-checked."""
+_HREF = re.compile(r"""href\s*=\s*["']([^"'#]+)["']""", re.IGNORECASE)
+
+
+def _datasheet_links(page_url: str, html: str) -> list[str]:
+    """Likely datasheet PDF links on a product page, best first."""
+    links = []
+    for href in _HREF.findall(html):
+        absolute = urljoin(page_url, href.strip())
+        lower = absolute.lower()
+        if lower.startswith("http") and (".pdf" in lower or "/lit/ds/" in lower or "/lit/gpn/" in lower):
+            links.append(absolute)
+    ranked = sorted(dict.fromkeys(links), key=lambda u: not ("datasheet" in u.lower() or "/ds/" in u.lower() or "/gpn/" in u.lower()))
+    return ranked[:3]
+
+
+def download_pdf(url: str, redirects_left: int = 5, follow_page: bool = True) -> tuple[str, bytes]:
+    """Return (suggested file name, PDF bytes). Each redirect hop is re-checked. If the URL is a
+    product web page, follow up to three datasheet links found on it (one hop, no deeper)."""
     host = _check_public(url)
     try:
         with requests.get(
@@ -43,8 +60,8 @@ def download_pdf(url: str, redirects_left: int = 5) -> tuple[str, bytes]:
             if response.is_redirect:
                 if redirects_left <= 0:
                     raise FetchError("Too many redirects")
-                location = requests.compat.urljoin(url, response.headers.get("Location", ""))
-                return download_pdf(location, redirects_left - 1)
+                location = urljoin(url, response.headers.get("Location", ""))
+                return download_pdf(location, redirects_left - 1, follow_page)
             response.raise_for_status()
             data = bytearray()
             for block in response.iter_content(64 * 1024):
@@ -54,7 +71,14 @@ def download_pdf(url: str, redirects_left: int = 5) -> tuple[str, bytes]:
     except requests.RequestException as exc:
         raise FetchError(f"Download failed: {exc}") from exc
     if not bytes(data[:5]).startswith(b"%PDF"):
-        raise FetchError("That URL did not return a PDF (it may be a web page linking to one)")
+        if follow_page:
+            html = bytes(data).decode("utf-8", errors="replace")
+            for link in _datasheet_links(url, html):
+                try:
+                    return download_pdf(link, follow_page=False)
+                except FetchError:
+                    continue
+        raise FetchError("That URL did not return a PDF, and no datasheet PDF link was found on the page")
     name = urlparse(url).path.rsplit("/", 1)[-1] or f"{host}.pdf"
     if not name.lower().endswith(".pdf"):
         name += ".pdf"
